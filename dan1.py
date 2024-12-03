@@ -1,4 +1,4 @@
-import math, time
+import math, time, sys
 import pygame
 import random
 
@@ -22,10 +22,10 @@ GREEN = (0, 255, 0)
 length1 = 200
 angle1 = 0
 length2 = 150
-angle2 = 60
+angle2 = 0
 
 point1 = [WIDTH/2, HEIGHT/2]
-target = [300, 555]
+target = [int(sys.argv[1]), int(sys.argv[2])]
 
 # Main game loop
 running = True
