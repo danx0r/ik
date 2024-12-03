@@ -51,6 +51,7 @@ def forward(point1, length1, angle1, length2, angle2):
 phase = 1
 ang1_orig = angle1
 ang2_orig = angle2
+dlast = 999999
 
 while running:
     # Handle events
@@ -61,25 +62,31 @@ while running:
     point2, point3 = forward(point1, length1, angle1, length2, angle2)
     dist = pdist(point3, target)
     if phase==1:
+        if dist >= dlast:
+            print ("ERROR can not reach target")
+            break
+        dlast = dist
         if dist < 1:
             print ("PHASE 2")
             phase = 2
-            add1 = (angle1 - ang1_orig) / 200
-            add2 = (angle2 - ang2_orig) / 200
+            add1 = (angle1 - ang1_orig) / 100
+            add2 = (angle2 - ang2_orig) / 100
             angle1 = ang1_orig
             angle2 = ang2_orig
-            do = 200
+            do = 100
 
-        delta = dist/20
+        delta = dist/40
 
-        p2, p3 = forward(point1, length1, angle1+delta, length2, angle2)
-        d2 = pdist(p3, target)
-        p2, p3 = forward(point1, length1, angle1-delta, length2, angle2)
-        d3 = pdist(p3, target)
-        if d3 < d2:
-            angle1-=delta
-        else:
-            angle1+=delta
+        mindist = 999999
+        for delta1, delta2 in ((delta, delta), (delta, -delta), (-delta, delta), (-delta, -delta)):
+            p2, p3 = forward(point1, length1, angle1+delta1, length2, angle2+delta2)
+            d2 = pdist(p3, target)
+            if d2 < mindist:
+                mindist = d2
+                ang1 = angle1+delta1
+                ang2 = angle2+delta2
+        angle1 = ang1
+        angle2 = ang2
 
         p2, p3 = forward(point1, length1, angle1, length2, angle2+delta)
         d2 = pdist(p3, target)
@@ -117,7 +124,7 @@ while running:
         # Control frame rate
         clock.tick(60)
         print ("running", angle1, angle2)
-    input()
+    # input()
 
 time.sleep(5)
 pygame.quit()
