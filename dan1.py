@@ -17,11 +17,7 @@ pygame.display.set_caption("Simple Points and Lines")
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
-
-# Fixed first point
-#point1 = [WIDTH//2, HEIGHT//2]  # Center of screen
-#point2 = [WIDTH//2 + 100, HEIGHT//2]  # Initial position
-#point3 = [WIDTH//2 + 200, HEIGHT//2]  # Initial position
+GREEN = (0, 255, 0)
 
 length1 = 200
 angle1 = 0
@@ -29,7 +25,8 @@ length2 = 150
 angle2 = 60
 
 point1 = [WIDTH/2, HEIGHT/2]
-target = [100, 50]
+target = [600, 350]
+
 # Main game loop
 running = True
 clock = pygame.time.Clock()
@@ -58,7 +55,25 @@ while running:
 
     point2, point3 = forward(point1, length1, angle1, length2, angle2)
     dist = pdist(point3, target)
-    angle1 -= 1
+    delta = dist/200
+
+    p2, p3 = forward(point1, length1, angle1+delta, length2, angle2)
+    d2 = pdist(p3, target)
+    p2, p3 = forward(point1, length1, angle1-delta, length2, angle2)
+    d3 = pdist(p3, target)
+    if d3 < d2:
+        angle1-=delta
+    else:
+        angle1+=delta
+
+    p2, p3 = forward(point1, length1, angle1, length2, angle2+delta)
+    d2 = pdist(p3, target)
+    p2, p3 = forward(point1, length1, angle1, length2, angle2-delta)
+    d3 = pdist(p3, target)
+    if d3 < d2:
+        angle2-=delta
+    else:
+        angle2+=delta
 
     # Clear screen
     screen.fill(BLACK)
@@ -68,6 +83,7 @@ while running:
     pygame.draw.line(screen, WHITE, point2, point3)
 
     # Draw points
+    pygame.draw.circle(screen, GREEN, target, 5)
     pygame.draw.circle(screen, RED, point1, 5)
     pygame.draw.circle(screen, RED, point2, 5)
     pygame.draw.circle(screen, RED, point3, 5)
