@@ -1,11 +1,5 @@
-#
-# Simple 2D 2DOF IK solver
-#
-
 import pygame
-import math
 import random
-from time import time
 
 # Initialize Pygame
 pygame.init()
@@ -14,36 +8,17 @@ pygame.init()
 WIDTH = 800
 HEIGHT = 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Moving Points and Lines")
+pygame.display.set_caption("Simple Points and Lines")
 
 # Colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
-BLUE = (0, 100, 255)
+RED = (255, 0, 0)
 
-class Point:
-    def __init__(self):
-        self.x = random.randint(0, WIDTH)
-        self.y = random.randint(0, HEIGHT)
-        self.speed_x = random.uniform(-2, 2)
-        self.speed_y = random.uniform(-2, 2)
-
-    def move(self):
-        # Update position
-        self.x += self.speed_x
-        self.y += self.speed_y
-
-        # Bounce off walls
-        if self.x < 0 or self.x > WIDTH:
-            self.speed_x *= -1
-        if self.y < 0 or self.y > HEIGHT:
-            self.speed_y *= -1
-
-    def draw(self, screen):
-        pygame.draw.circle(screen, BLUE, (int(self.x), int(self.y)), 5)
-
-# Create points
-points = [Point() for _ in range(10)]
+# Fixed first point
+point1 = [WIDTH//2, HEIGHT//2]  # Center of screen
+point2 = [WIDTH//2 + 100, HEIGHT//2]  # Initial position
+point3 = [WIDTH//2 + 200, HEIGHT//2]  # Initial position
 
 # Main game loop
 running = True
@@ -55,32 +30,20 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
+    point2[1] -= 1
+#    point2[1] += random.randint(-2, 2)
+
     # Clear screen
     screen.fill(BLACK)
 
-    # Move and draw points
-    for point in points:
-        point.move()
-        point.draw(screen)
+    # Draw lines
+    pygame.draw.line(screen, WHITE, point1, point2)
+    pygame.draw.line(screen, WHITE, point2, point3)
 
-    # Draw lines between points
-    for i in range(len(points)):
-        for j in range(i + 1, len(points)):
-            # Calculate distance between points
-            dist = math.sqrt((points[i].x - points[j].x)**2 + (points[i].y - points[j].y)**2)
-
-            # Only draw lines between points that are close enough
-            if dist < 150:
-                # Make lines more transparent with distance
-                alpha = int(255 * (1 - dist/150))
-                color = (WHITE[0], WHITE[1], WHITE[2], alpha)
-
-                # Create a new surface for the line with alpha channel
-                line_surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-                pygame.draw.line(line_surface, color, 
-                               (int(points[i].x), int(points[i].y)),
-                               (int(points[j].x), int(points[j].y)), 1)
-                screen.blit(line_surface, (0, 0))
+    # Draw points
+    pygame.draw.circle(screen, RED, point1, 5)
+    pygame.draw.circle(screen, RED, point2, 5)
+    pygame.draw.circle(screen, RED, point3, 5)
 
     # Update display
     pygame.display.flip()
