@@ -62,23 +62,25 @@ while running:
     point2, point3 = forward(point1, length1, angle1, length2, angle2)
     dist = pdist(point3, target)
     if phase==1:
-        if dist >= dlast:
-            print ("ERROR can not reach target")
-            break
+        # if dist > dlast:
+        #     print ("ERROR can not reach target")
+        #     break
         dlast = dist
         if dist < 1:
             print ("PHASE 2")
             phase = 2
-            add1 = (angle1 - ang1_orig) / 100
-            add2 = (angle2 - ang2_orig) / 100
-            angle1 = ang1_orig
-            angle2 = ang2_orig
+            nuang1 = random.random() * 360 - 180
+            nuang2 = random.random() * 360 - 180
+            add1 = (angle1 - nuang1) / 100
+            add2 = (angle2 - nuang2) / 100
+            angle1 = nuang1
+            angle2 = nuang2
             do = 100
 
         delta = dist/40
 
         mindist = 999999
-        for delta1, delta2 in ((delta, delta), (delta, -delta), (-delta, delta), (-delta, -delta)):
+        for delta1, delta2 in ((delta, delta), (delta, -delta), (-delta, delta), (-delta, -delta), (0, delta), (0, -delta), (delta, 0), (-delta, 0)):
             p2, p3 = forward(point1, length1, angle1+delta1, length2, angle2+delta2)
             d2 = pdist(p3, target)
             if d2 < mindist:
@@ -88,14 +90,14 @@ while running:
         angle1 = ang1
         angle2 = ang2
 
-        p2, p3 = forward(point1, length1, angle1, length2, angle2+delta)
-        d2 = pdist(p3, target)
-        p2, p3 = forward(point1, length1, angle1, length2, angle2-delta)
-        d3 = pdist(p3, target)
-        if d3 < d2:
-            angle2-=delta
-        else:
-            angle2+=delta
+        # p2, p3 = forward(point1, length1, angle1, length2, angle2+delta)
+        # d2 = pdist(p3, target)
+        # p2, p3 = forward(point1, length1, angle1, length2, angle2-delta)
+        # d3 = pdist(p3, target)
+        # if d3 < d2:
+        #     angle2-=delta
+        # else:
+        #     angle2+=delta
 
     if phase==2:
         angle1 += add1
