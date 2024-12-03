@@ -3,6 +3,7 @@ import pygame
 import random
 
 R2D = 180/math.pi
+SHOW_PLAN = True
 
 # Initialize Pygame
 pygame.init()
@@ -60,7 +61,7 @@ while running:
     point2, point3 = forward(point1, length1, angle1, length2, angle2)
     dist = pdist(point3, target)
     if phase==1:
-        if dist < 0.1:
+        if dist < 1:
             print ("PHASE 2")
             phase = 2
             add1 = (angle1 - ang1_orig) / 200
@@ -95,6 +96,7 @@ while running:
         if do < 0:
            break
 
+    if phase==2 or SHOW_PLAN:
         # Clear screen
         screen.fill(BLACK)
 
