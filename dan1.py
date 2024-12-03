@@ -70,7 +70,7 @@ while running:
             angle2 = ang2_orig
             do = 200
 
-        delta = dist/200
+        delta = dist/20
 
         p2, p3 = forward(point1, length1, angle1+delta, length2, angle2)
         d2 = pdist(p3, target)
@@ -89,6 +89,7 @@ while running:
             angle2-=delta
         else:
             angle2+=delta
+
     if phase==2:
         angle1 += add1
         angle2 += add2
