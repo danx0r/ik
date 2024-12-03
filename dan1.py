@@ -21,9 +21,9 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 
 length1 = 200
-angle1 = 0
+angle1 = 45
 length2 = 150
-angle2 = 0
+angle2 = 45
 
 point1 = [WIDTH/2, HEIGHT/2]
 target = [int(sys.argv[1]), int(sys.argv[2])]
@@ -43,8 +43,8 @@ def forward(point1, length1, angle1, length2, angle2):
     point2[1] = point1[1] - math.sin(angle1/R2D) * length1
 
     point3 = [0, 0]
-    point3[0] = point2[0] + math.cos(angle2/R2D) * length2
-    point3[1] = point2[1] - math.sin(angle2/R2D) * length2
+    point3[0] = point2[0] + math.cos((angle1+angle2)/R2D) * length2
+    point3[1] = point2[1] - math.sin((angle1+angle2)/R2D) * length2
 
     return point2, point3
 
@@ -116,6 +116,7 @@ while running:
         # Control frame rate
         clock.tick(60)
         print ("running", dist, point1, point2, point3)
+#    input()
 
 time.sleep(5)
 pygame.quit()
