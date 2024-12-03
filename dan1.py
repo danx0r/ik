@@ -8,8 +8,8 @@ R2D = 180/math.pi
 pygame.init()
 
 # Set up the display
-WIDTH = 800
-HEIGHT = 600
+WIDTH = 1000
+HEIGHT = 1000
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Simple Points and Lines")
 
@@ -29,11 +29,26 @@ length2 = 150
 angle2 = 60
 
 point1 = [WIDTH/2, HEIGHT/2]
-point2 = [0, 0]
-point3 = [0, 0]
+target = [100, 50]
 # Main game loop
 running = True
 clock = pygame.time.Clock()
+
+def pdist(p1, p2):
+    x, y = p1
+    xx, yy = p2
+    return((x-xx)**2 + (y-yy)**2) ** 0.5
+
+def forward(point1, length1, angle1, length2, angle2):
+    point2 = [0, 0]
+    point2[0] = point1[0] + math.cos(angle1/R2D) * length1
+    point2[1] = point1[1] - math.sin(angle1/R2D) * length1
+
+    point3 = [0, 0]
+    point3[0] = point2[0] + math.cos(angle2/R2D) * length2
+    point3[1] = point2[1] - math.sin(angle2/R2D) * length2
+
+    return point2, point3
 
 while running:
     # Handle events
@@ -41,16 +56,9 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-#    point2[1] -= 1
-#    point2[1] += random.randint(-2, 2)
-    # forward kinematics
-    point2[0] = point1[0] + math.cos(angle1/R2D) * length1
-    point2[1] = point1[1] - math.sin(angle1/R2D) * length1
-    angle1 += 1
-
-    point3[0] = point2[0] + math.cos(angle2/R2D) * length2
-    point3[1] = point2[1] - math.sin(angle2/R2D) * length2
-    angle2 -= 0.6
+    point2, point3 = forward(point1, length1, angle1, length2, angle2)
+    dist = pdist(point3, target)
+    angle1 -= 1
 
     # Clear screen
     screen.fill(BLACK)
@@ -69,6 +77,6 @@ while running:
 
     # Control frame rate
     clock.tick(60)
-    print ("running", point1, point2, point3)
+    print ("running", dist, point1, point2, point3)
 
 pygame.quit()
