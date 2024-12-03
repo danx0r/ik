@@ -52,6 +52,7 @@ phase = 1
 ang1_orig = angle1
 ang2_orig = angle2
 dlast = 999999
+errors = 0
 
 while running:
     # Handle events
@@ -62,9 +63,11 @@ while running:
     point2, point3 = forward(point1, length1, angle1, length2, angle2)
     dist = pdist(point3, target)
     if phase==1:
-        # if dist > dlast:
-        #     print ("ERROR can not reach target")
-        #     break
+        if dist > dlast:
+            errors += 1
+        if errors > 2:
+            print ("ERROR can not reach target")
+            break
         dlast = dist
         if dist < 1:
             print ("PHASE 2")
@@ -125,7 +128,7 @@ while running:
 
         # Control frame rate
         clock.tick(60)
-        print ("running", angle1, angle2)
+        print ("running", dist, angle1, angle2)
     # input()
 
 time.sleep(5)
