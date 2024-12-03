@@ -21,9 +21,9 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 
 length1 = 200
-angle1 = 45
+angle1 = 0
 length2 = 150
-angle2 = 45
+angle2 = 0
 
 point1 = [WIDTH/2, HEIGHT/2]
 target = [int(sys.argv[1]), int(sys.argv[2])]
@@ -115,8 +115,8 @@ while running:
 
         # Control frame rate
         clock.tick(60)
-        print ("running", dist, point1, point2, point3)
-#    input()
+        print ("running", angle1, angle2)
+    input()
 
 time.sleep(5)
 pygame.quit()
