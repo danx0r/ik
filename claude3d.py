@@ -9,8 +9,9 @@ MODEL_XML = """
 <mujoco>
     <option gravity="0 0 -9.81"/>
     <worldbody>
+        <light cutoff="100" ambient="0.25 0.25 0.25" diffuse=".7 .7 .7" specular=".85 .85 .85" dir="-0 0 -1.3" directional="true" exponent="1" pos="0 0 1.3" castshadow="false"/>
         <!-- Ground plane -->
-        <geom type="plane" size="5 5 0.1" rgba=".9 .9 .9 1"/>
+        <geom type="plane" size="5 5 0.1" rgba=".49 .49 .49 1"/>
 
         <!-- First object (fixed base) -->
         <body pos="0 0 1" name="object1">
