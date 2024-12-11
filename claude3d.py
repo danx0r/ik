@@ -118,12 +118,13 @@ class InteractiveScene:
                 self.cam.lookat[1] = 0
                 self.cam.lookat[2] = 0
 
-    def run(self, steps=999999, pos=0):
+    def run(self, steps=999999, j1=0, j2=0):
         while steps > 0 and not glfw.window_should_close(self.window):
             steps -= 1
             time_prev = self.data.time
 
-            self.data.actuator('j1').ctrl[0] = pos
+            self.data.actuator('j1').ctrl[0] = j1
+            self.data.actuator('j2').ctrl[0] = j2
 
             while (self.data.time - time_prev < 1.0/60.0):
                 mujoco.mj_step(self.model, self.data)
@@ -153,10 +154,12 @@ def main():
         steps = 100
         x = input("joint positions:")
         if x:
-            pos = float(x)
+            j1, j2 = x.split()
+            j1 = float(j1)
+            j2 = float(j2)
         else:
             steps = 300
-        scene.run(steps, pos/57.2958)
+        scene.run(steps, j1/57.2958, j2/57.2958)
 
 if __name__ == "__main__":
     main()
