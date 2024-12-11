@@ -42,9 +42,9 @@ class InteractiveScene:
 
         # Initialize camera
         self.cam = mujoco.MjvCamera()
-        self.cam.distance = 3.0
+        self.cam.distance = 4.5
         self.cam.azimuth = 90.0
-        self.cam.elevation = -45.0
+        self.cam.elevation = -10.0
         self.cam.lookat[0] = 0
         self.cam.lookat[1] = 0
         self.cam.lookat[2] = 0
@@ -118,13 +118,14 @@ class InteractiveScene:
                 self.cam.lookat[1] = 0
                 self.cam.lookat[2] = 0
 
-    def run(self, steps=999999, j1=0, j2=0):
+    def run(self, steps=999999, j1=0, j2=0, j3=0):
         while steps > 0 and not glfw.window_should_close(self.window):
             steps -= 1
             time_prev = self.data.time
 
             self.data.actuator('j1').ctrl[0] = j1
             self.data.actuator('j2').ctrl[0] = j2
+            self.data.actuator('j3').ctrl[0] = j3
 
             while (self.data.time - time_prev < 1.0/60.0):
                 mujoco.mj_step(self.model, self.data)
@@ -150,16 +151,21 @@ class InteractiveScene:
 
 def main():
     scene = InteractiveScene()
+    j1 = j2 = j3 = 0
     while True:
-        steps = 100
+        steps = 150
         x = input("joint positions:")
         if x:
-            j1, j2 = x.split()
-            j1 = float(j1)
-            j2 = float(j2)
+            try:
+                j1, j2, j3 = x.split()
+                j1 = float(j1)
+                j2 = float(j2)
+                j3 = float(j3)
+            except:
+                print ("ERROR")
         else:
-            steps = 300
-        scene.run(steps, j1/57.2958, j2/57.2958)
+            steps = 400
+        scene.run(steps, j1/57.2958, j2/57.2958, j3/57.2958)
 
 if __name__ == "__main__":
     main()
