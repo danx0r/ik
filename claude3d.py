@@ -122,6 +122,8 @@ class InteractiveScene:
         while not glfw.window_should_close(self.window):
             time_prev = self.data.time
 
+            self.data.actuator('j1').ctrl[0] += 0.01
+
             while (self.data.time - time_prev < 1.0/60.0):
                 mujoco.mj_step(self.model, self.data)
 
