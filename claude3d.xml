@@ -22,6 +22,6 @@
         </body>
     </worldbody>
     <actuator>
-        <position name="j1" inheritrange="1" kp="120" kv="12" joint="j1"/>
+        <position name="j1" inheritrange="1" kp="5000" kv="1000" joint="j1"/>
     </actuator>
 </mujoco>
