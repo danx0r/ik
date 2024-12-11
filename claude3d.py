@@ -66,7 +66,7 @@ class InteractiveScene:
 
         if self.button_left:
             self.cam.azimuth += dx * 0.5
-            self.cam.elevation = max(min(self.cam.elevation + dy * 0.5, 90), -90)
+            self.cam.elevation = max(min(self.cam.elevation - dy * 0.5, 90), -90)
         elif self.button_right:
             self.cam.lookat[0] -= dx * 0.01 * self.cam.distance
             self.cam.lookat[1] += dy * 0.01 * self.cam.distance
