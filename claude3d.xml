@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <mujoco>
-    <option gravity="0 0 -0.25"/>
+    <option gravity="0 0 0"/>
     <asset>
         <texture builtin="checker" height="100" name="texplane" rgb1="0 0 0" rgb2="0.8 0.8 0.8" type="2d" width="100"/>
         <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="60 60" texture="texplane"/>
@@ -28,8 +28,8 @@
         </body>
     </worldbody>
     <actuator>
-        <position name="j1" inheritrange="1" kp="2500" kv="400" joint="j1"/>
-        <position name="j2" inheritrange="1" kp="2500" kv="400" joint="j2"/>
-        <position name="j3" inheritrange="1" kp="2500" kv="400" joint="j3"/>
+        <position name="j1" inheritrange="1" kp="200" kv="50" joint="j1"/>
+        <position name="j2" inheritrange="1" kp="200" kv="50" joint="j2"/>
+        <position name="j3" inheritrange="1" kp="100" kv="20" joint="j3"/>
     </actuator>
 </mujoco>
