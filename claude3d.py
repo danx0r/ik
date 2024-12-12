@@ -3,6 +3,7 @@ import numpy as np
 import glfw
 import time
 
+DEG2RAD=57.2958
 f = open("claude3d.xml")
 MODEL_XML = f.read()
 f.close()
@@ -118,14 +119,24 @@ class InteractiveScene:
                 self.cam.lookat[1] = 0
                 self.cam.lookat[2] = 0
 
-    def run(self, steps=999999, j1=0, j2=0, j3=0):
+    def run(self, steps=999999, j1=None, j2=None, j3=None, x=None, y=None, z=None):
         while steps > 0 and not glfw.window_should_close(self.window):
             steps -= 1
             time_prev = self.data.time
 
-            self.data.actuator('j1').ctrl[0] = j1
-            self.data.actuator('j2').ctrl[0] = j2
-            self.data.actuator('j3').ctrl[0] = j3
+            if x is not None:
+                self.data.actuator('cursor_x').ctrl[0] = x
+            if y is not None:
+                self.data.actuator('cursor_y').ctrl[0] = y
+            if z is not None:
+                self.data.actuator('cursor_z').ctrl[0] = z
+
+            if j1 is not None:
+                self.data.actuator('j1').ctrl[0] = j1
+            if j2 is not None:
+                self.data.actuator('j2').ctrl[0] = j2
+            if j3 is not None:
+                self.data.actuator('j3').ctrl[0] = j3
 
             while (self.data.time - time_prev < 1.0/60.0):
                 mujoco.mj_step(self.model, self.data)
@@ -149,36 +160,35 @@ class InteractiveScene:
 
         # glfw.terminate()
 
-def mainx():
-    scene = InteractiveScene()
-    j1 = j2 = j3 = 0
-    while True:
-        steps = 150
-        x = input("joint positions:")
-        if x:
-            try:
-                j1, j2, j3 = x.split()
-                j1 = float(j1)
-                j2 = float(j2)
-                j3 = float(j3)
-            except:
-                print ("ERROR")
-        else:
-            steps = 400
-        scene.run(steps, j1/57.2958, j2/57.2958, j3/57.2958)
-
-# Build lookup tbl
 def main():
     global scene
     scene = InteractiveScene()
-    for j1 in range(-90, 91, 5):
-        for j2 in range(-90, 91, 5):
-            for j3 in range(-90, 91, 5):
-                steps = 250
-                scene.run(steps, j1/57.2958, j2/57.2958, j3/57.2958)
-                coords = scene.data.body("endpt").xpos
-                print (f"angles, {j1}, {j2}, {j3}, coords, {coords[0]*57.2958}, {coords[1]*57.2958}, {coords[2]*57.2958}")
-                # break
+    j1 = j2 = j3 = x = y = z = None
+    while True:
+        steps = 250
+        if input("press x for cursor, j for joints: ")[0] == 'x':
+            x = input("coordinates: ")
+            if x:
+                if 1:#try:
+                    x, y, z = x.strip().split()
+                    x = float(x)
+                    y = float(y)
+                    z = float(z)
+                # except:
+                #     print ("ERROR")
+        else:
+            j = input("joint angles: ")
+            if j:
+                if 1:#try:
+                    j1, j2, j3 = j.strip().split()
+                    j1 = float(j1)/DEG2RAD
+                    j2 = float(j2)/DEG2RAD
+                    j3 = float(j3)/DEG2RAD
+                    print (f"DBG0, {j1}, {j2}, {j3}")
+                # except:
+                #     print ("ERROR")
+        print (f"DENG, {steps}, {j1}, {j2}, {j3}, {x}, {y}, {z}")
+        scene.run(steps, j1, j2, j3, x, y, z)
 
 if __name__ == "__main__":
     main()
