@@ -149,7 +149,7 @@ class InteractiveScene:
 
         # glfw.terminate()
 
-def main():
+def main_x():
     scene = InteractiveScene()
     j1 = j2 = j3 = 0
     while True:
@@ -166,6 +166,17 @@ def main():
         else:
             steps = 400
         scene.run(steps, j1/57.2958, j2/57.2958, j3/57.2958)
+
+def main():
+    global scene
+    scene = InteractiveScene()
+    j1 = j2 = j3 = 0
+    for j1 in range(-90, 91, 5):
+        steps = 150
+        scene.run(steps, j1/57.2958, j2/57.2958, j3/57.2958)
+        coords = scene.data.body("endpt").xpos
+        print (f"angles, {j1}, {j2}, {j3}, coords, {coords[0]*57.2958}, {coords[1]*57.2958}, {coords[2]*57.2958}")
+        # break
 
 if __name__ == "__main__":
     main()
