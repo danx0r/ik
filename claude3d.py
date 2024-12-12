@@ -139,13 +139,13 @@ class InteractiveScene:
                 self.model, self.data, mujoco.MjvOption(), 
                 None, self.cam, mujoco.mjtCatBit.mjCAT_ALL.value, self.scene
             )
-            mujoco.mjr_render(viewport, self.scene, self.context)
+            # mujoco.mjr_render(viewport, self.scene, self.context)
 
             # Swap OpenGL buffers
-            glfw.swap_buffers(self.window)
-            glfw.poll_events()
+            # glfw.swap_buffers(self.window)
+            # glfw.poll_events()
 
-            time.sleep(0.001)
+            # time.sleep(0.001)
 
         # glfw.terminate()
 
