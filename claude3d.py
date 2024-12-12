@@ -171,12 +171,12 @@ def mainx():
 def main():
     global scene
     scene = InteractiveScene()
-    # for j1 in range(-90, 91, 5):
-    #     for j2 in range(-90, 91, 5):
-    #         for j3 in range(-90, 91, 5):
-    for j1 in range(0, 90, 45):
-        for j2 in range(0, 90, 45):
-            for j3 in range(0, 90, 45):
+    for j1 in range(-90, 91, 5):
+        for j2 in range(-90, 91, 5):
+            for j3 in range(-90, 91, 5):
+    # for j1 in range(0, 90, 45):
+    #     for j2 in range(0, 90, 45):
+    #         for j3 in range(0, 90, 45):
                 steps = 500
                 scene.run(steps, j1/57.2958, j2/57.2958, j3/57.2958)
                 coords = scene.data.body("endpt").xpos
