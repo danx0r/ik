@@ -179,8 +179,8 @@ def coords_to_angles(x, y, z):
         # print(dsq)
         if dsq < closest:
             closest = dsq
-            angles = list(row[:3])
-    return angles
+            angles_coords = list(row)
+    return angles_coords
 
 def main():
     global scene
@@ -196,7 +196,8 @@ def main():
                 y = float(y)
                 z = float(z)
 
-                j1, j2, j3 = coords_to_angles(x, y, z)
+                j1, j2, j3, x ,y ,z = coords_to_angles(x, y, z)
+                print (f"ANGLES: {j1}, {j2}, {j3} COORDS: {x}, {y}, {z}")
                 j1 = float(j1)/DEG2RAD
                 j2 = float(j2)/DEG2RAD
                 j3 = float(j3)/DEG2RAD
@@ -204,12 +205,11 @@ def main():
             j = input("joint angles: ")
             if j:
                 j1, j2, j3 = j.strip().split()
-                print (f"DBG0, {j1}, {j2}, {j3}")
+                print (f"ANGLES: {j1}, {j2}, {j3} COORDS: {x}, {y}, {z}")
                 j1 = float(j1)/DEG2RAD
                 j2 = float(j2)/DEG2RAD
                 j3 = float(j3)/DEG2RAD
 
-        print (f"DBG2, {steps}, {j1}, {j2}, {j3}, {x}, {y}, {z}")
         scene.run(steps, j1, j2, j3, x, y, z)
 
 if __name__ == "__main__":
