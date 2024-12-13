@@ -160,36 +160,6 @@ class InteractiveScene:
 
         # glfw.terminate()
 
-def main():
-    global scene
-    scene = InteractiveScene()
-    j1 = j2 = j3 = x = y = z = None
-    while True:
-        steps = 250
-        if input("press x for cursor, j for joints: ")[0] == 'x':
-            x = input("coordinates: ")
-            if x:
-                if 1:#try:
-                    x, y, z = x.strip().split()
-                    x = float(x)
-                    y = float(y)
-                    z = float(z)
-                # except:
-                #     print ("ERROR")
-        else:
-            j = input("joint angles: ")
-            if j:
-                if 1:#try:
-                    j1, j2, j3 = j.strip().split()
-                    j1 = float(j1)/DEG2RAD
-                    j2 = float(j2)/DEG2RAD
-                    j3 = float(j3)/DEG2RAD
-                    print (f"DBG0, {j1}, {j2}, {j3}")
-                # except:
-                #     print ("ERROR")
-        print (f"DENG, {steps}, {j1}, {j2}, {j3}, {x}, {y}, {z}")
-        scene.run(steps, j1, j2, j3, x, y, z)
-
 def build_lookup():
     lookup = []
     f = open("coords.csv")
@@ -209,8 +179,39 @@ def coords_to_angles(x, y, z):
         # print(dsq)
         if dsq < closest:
             closest = dsq
-            coords = row[:3]
-    return coords
+            angles = list(row[:3])
+    return angles
+
+def main():
+    global scene
+    scene = InteractiveScene()
+    j1 = j2 = j3 = x = y = z = None
+    while True:
+        steps = 300
+        if input("press x for cursor, j for joints: ")[0] == 'x':
+            x = input("coordinates: ")
+            if x:
+                x, y, z = x.strip().split()
+                x = float(x)
+                y = float(y)
+                z = float(z)
+
+                j1, j2, j3 = coords_to_angles(x, y, z)
+                j1 = float(j1)/DEG2RAD
+                j2 = float(j2)/DEG2RAD
+                j3 = float(j3)/DEG2RAD
+        else:
+            j = input("joint angles: ")
+            if j:
+                j1, j2, j3 = j.strip().split()
+                print (f"DBG0, {j1}, {j2}, {j3}")
+                j1 = float(j1)/DEG2RAD
+                j2 = float(j2)/DEG2RAD
+                j3 = float(j3)/DEG2RAD
+
+        print (f"DBG2, {steps}, {j1}, {j2}, {j3}, {x}, {y}, {z}")
+        scene.run(steps, j1, j2, j3, x, y, z)
 
 if __name__ == "__main__":
+    lookup = build_lookup()
     main()
