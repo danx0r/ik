@@ -180,7 +180,7 @@ def main():
                 steps = 500
                 scene.run(steps, j1/57.2958, j2/57.2958, j3/57.2958)
                 coords = scene.data.body("endpt").xpos
-                print (f"angles, {j1}, {j2}, {j3}, coords, {coords[0]}, {coords[1]}, {coords[2]}")
+                print (f"angles, {j1}, {j2}, {j3}, coords, {coords[0]:.5f}, {coords[1]:.5f}, {coords[2]:.5f}")
                 # break
 
 if __name__ == "__main__":
