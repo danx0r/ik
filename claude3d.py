@@ -182,6 +182,11 @@ def coords_to_angles(x, y, z):
             angles_coords = list(row)
     return angles_coords
 
+def angles_to_coords(j1, j2, j3):
+    for row in lookup:
+        if row[0] == j1 and row[1] == j2 and row[2] == j3:
+            return row[3:]
+
 def main():
     global scene
     scene = InteractiveScene()
@@ -205,10 +210,14 @@ def main():
             j = input("joint angles: ")
             if j:
                 j1, j2, j3 = j.strip().split()
+                j1 = float(j1)
+                j2 = float(j2)
+                j3 = float(j3)
+                x, y, z = angles_to_coords(j1, j2, j3)
                 print (f"ANGLES: {j1}, {j2}, {j3} COORDS: {x}, {y}, {z}")
-                j1 = float(j1)/DEG2RAD
-                j2 = float(j2)/DEG2RAD
-                j3 = float(j3)/DEG2RAD
+                j1 /= DEG2RAD
+                j2 /= DEG2RAD
+                j3 /= DEG2RAD
 
         scene.run(steps, j1, j2, j3, x, y, z)
 
