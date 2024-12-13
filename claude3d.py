@@ -190,5 +190,27 @@ def main():
         print (f"DENG, {steps}, {j1}, {j2}, {j3}, {x}, {y}, {z}")
         scene.run(steps, j1, j2, j3, x, y, z)
 
+def build_lookup():
+    lookup = []
+    f = open("coords.csv")
+    for row in f.readlines():
+        row = row.strip().split(",")
+        row.pop(4)
+        row.pop(0)
+        row = [float(x) for x in row]
+        lookup.append(row)
+        # break
+    return lookup
+
+def coords_to_angles(x, y, z):
+    closest = 999999
+    for row in lookup:
+        dsq = (row[3]-x)**2 + (row[4]-y)**2 + (row[5]-z)**2
+        # print(dsq)
+        if dsq < closest:
+            closest = dsq
+            coords = row[:3]
+    return coords
+
 if __name__ == "__main__":
     main()
