@@ -202,8 +202,8 @@ def main():
                 z = float(z)
                 scene.run(steps/2, j1, j2, j3, x, y, z)
 
-                j1, j2, j3, x ,y ,z = coords_to_angles(x, y, z)
-                print (f"ANGLES: {j1}, {j2}, {j3} COORDS: {x}, {y}, {z}")
+                j1, j2, j3, xx ,yy ,zz = coords_to_angles(x, y, z)
+                print (f"ANGLES: {j1}, {j2}, {j3} ARM COORDS: {xx}, {yy}, {zz}")
                 j1 = float(j1)/DEG2RAD
                 j2 = float(j2)/DEG2RAD
                 j3 = float(j3)/DEG2RAD
