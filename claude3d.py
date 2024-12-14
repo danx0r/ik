@@ -1,6 +1,7 @@
 import mujoco
 import numpy as np
 import glfw
+import argparse
 import time
 
 DEG2RAD=57.2958
@@ -119,7 +120,7 @@ class InteractiveScene:
                 self.cam.lookat[1] = 0
                 self.cam.lookat[2] = 0
 
-    def run(self, steps=999999, j1=None, j2=None, j3=None, x=None, y=None, z=None):
+    def run(self, steps=999999, j1=None, j2=None, j3=None, x=None, y=None, z=None, render=True):
         while steps > 0 and not glfw.window_should_close(self.window):
             steps -= 1
             time_prev = self.data.time
@@ -150,15 +151,15 @@ class InteractiveScene:
                 self.model, self.data, mujoco.MjvOption(), 
                 None, self.cam, mujoco.mjtCatBit.mjCAT_ALL.value, self.scene
             )
-            mujoco.mjr_render(viewport, self.scene, self.context)
+            if render:
+                mujoco.mjr_render(viewport, self.scene, self.context)
 
-            # Swap OpenGL buffers
-            glfw.swap_buffers(self.window)
-            glfw.poll_events()
+                # Swap OpenGL buffers
+                glfw.swap_buffers(self.window)
+                glfw.poll_events()
+                time.sleep(0.001)
 
-            time.sleep(0.001)
-
-        # glfw.terminate()
+            # glfw.terminate()
 
 def build_lookup():
     lookup = []
@@ -222,6 +223,29 @@ def main():
 
         scene.run(steps, j1, j2, j3, x, y, z)
 
+def create_lookup(fn, render=False, skip=5):
+    global scene
+    scene = InteractiveScene()
+    f = open(fn, 'w')
+    for j1 in range(-90, 95, skip):
+        for j2 in range(-90, 95, skip):
+            for j3 in range(0, 185, skip):
+                steps = 1000
+                scene.run(steps, j1/57.2958, j2/57.2958, j3/57.2958, render=render)
+                coords = scene.data.body("endpt").xpos
+                print (f"angles, {j1}, {j2}, {j3}, coords, {coords[0]:.5f}, {coords[1]:.5f}, {coords[2]:.5f}", file=f)
+                f.flush()
+    f.close()
+
 if __name__ == "__main__":
-    lookup = build_lookup()
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--create_lookup")
+    parser.add_argument("--render", action="store_true")
+    parser.add_argument("--skip", type=int)
+    args = parser.parse_args()
+
+    if args.create_lookup:
+        create_lookup(args.create_lookup, args.render, args.skip)
+    else:
+        lookup = build_lookup()
+        main()
