@@ -34,8 +34,8 @@
         </body>
     </worldbody>
     <actuator>
-        <position name="j1" inheritrange="1" kp="200" kv="50" joint="j1"/>
-        <position name="j2" inheritrange="1" kp="200" kv="50" joint="j2"/>
+        <position name="j1" inheritrange="1" kp="500" kv="100" joint="j1"/>
+        <position name="j2" inheritrange="1" kp="500" kv="100" joint="j2"/>
         <position name="j3" inheritrange="1" kp="100" kv="20" joint="j3"/>
         <position name="cursor_x" inheritrange="0" kp="15" kv="2" joint="cursor_x"/>
         <position name="cursor_y" inheritrange="0" kp="15" kv="2" joint="cursor_y"/>
