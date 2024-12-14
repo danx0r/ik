@@ -190,7 +190,7 @@ def angles_to_coords(j1, j2, j3):
 def main():
     global scene
     scene = InteractiveScene()
-    j1 = j2 = j3 = x = y = z = None
+    j1 = j2 = j3 = x = y = z = 0
     while True:
         steps = 300
         if input("press x for cursor, j for joints: ")[0] == 'x':
@@ -200,6 +200,7 @@ def main():
                 x = float(x)
                 y = float(y)
                 z = float(z)
+                scene.run(steps/2, j1, j2, j3, x, y, z)
 
                 j1, j2, j3, x ,y ,z = coords_to_angles(x, y, z)
                 print (f"ANGLES: {j1}, {j2}, {j3} COORDS: {x}, {y}, {z}")
