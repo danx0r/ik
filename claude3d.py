@@ -187,6 +187,8 @@ def angles_to_coords(j1, j2, j3):
     for row in lookup:
         if row[0] == j1 and row[1] == j2 and row[2] == j3:
             return row[3:]
+    print ("Angles not in lookup")
+    return 0, 0, 0
 
 def main():
     global scene
