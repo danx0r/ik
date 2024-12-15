@@ -230,7 +230,7 @@ def create_lookup(fn, render=False, skip=5):
     scene = InteractiveScene()
     f = open(fn, 'w')
     for j1 in range(-90, 95, skip):
-        for j2 in range(-90, 95, skip):
+        for j2 in range(-180, 95, skip):
             for j3 in range(0, 185, skip):
                 steps = 1000
                 scene.run(steps, j1/57.2958, j2/57.2958, j3/57.2958, render=render)
