@@ -27,15 +27,15 @@
         </body> -->
 
         <body pos="0 0 0">
-            <joint name="j1" type="hinge" range="-180 180" axis="0 0 1"/>
+            <joint name="j1" type="hinge" axis="0 0 1"/>
             <geom type="capsule" fromto="0 0 -.5 0 0 0.5" size="0.005" contype="0" conaffinity="0" rgba="1 0 0 1"/>
             <body pos="0 0 0">
                 <geom type="box" size="0.07" fromto="0 0 0 1 0 0" rgba="0.2 0.2 0.8 0.7"/>
-                <joint name="j2" type="hinge" range="-180 180" axis="0 -1 0"/>
+                <joint name="j2" type="hinge" axis="0 -1 0"/>
                 <geom type="capsule" fromto="0 -.5 0 0 0.5 0" size="0.005" contype="0" conaffinity="0" rgba="0 1 0 1"/>
                 <body pos="1 0 0">
                     <geom type="box" size="0.06" fromto="0 0 0 1 0 0" rgba="0.2 0.8 0.2 0.7"/>
-                    <joint name="j3" type="hinge" range="-180 180" axis="0 -1 0"/>
+                    <joint name="j3" type="hinge" axis="0 -1 0"/>
                     <geom type="capsule" fromto="0 -.5 0 0 0.5 0" size="0.007" contype="0" conaffinity="0" rgba="0.2 0.2 1 1"/>
                     <body name="endpt" pos="1 0 0">
                         <geom type="sphere" size=".1" mass="0.0001"/>
@@ -45,14 +45,14 @@
         </body>
     </worldbody>
     <actuator>
-        <position name="j1" inheritrange="1" kp="500" kv="100" joint="j1"/>
-        <position name="j2" inheritrange="1" kp="500" kv="100" joint="j2"/>
-        <position name="j3" inheritrange="1" kp="100" kv="20" joint="j3"/>
+        <position name="j1" kp="500" kv="100" joint="j1"/>
+        <position name="j2" kp="500" kv="100" joint="j2"/>
+        <position name="j3" kp="100" kv="20" joint="j3"/>
         <position name="cursor_x" inheritrange="0" kp="5" kv="2" joint="cursor_x"/>
         <position name="cursor_y" inheritrange="0" kp="5" kv="2" joint="cursor_y"/>
         <position name="cursor_z" inheritrange="0" kp="5" kv="2" joint="cursor_z"/>
-        <position name="cursor_w" inheritrange="0" kp="3" kv="1" joint="cursor_w"/>
-        <position name="cursor_p" inheritrange="0" kp="3" kv="1" joint="cursor_p"/>
-        <position name="cursor_r" inheritrange="0" kp="3" kv="1" joint="cursor_r"/>
+        <position name="cursor_w" kp="3" kv="1" joint="cursor_w"/>
+        <position name="cursor_p" kp="3" kv="1" joint="cursor_p"/>
+        <position name="cursor_r" kp="3" kv="1" joint="cursor_r"/>
     </actuator>
 </mujoco>
