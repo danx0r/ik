@@ -9,10 +9,16 @@
         <light cutoff="100" ambient="0.25 0.25 0.25" diffuse=".7 .7 .7" specular=".85 .85 .85" dir="-0 0 -1.3" directional="true" exponent="1" pos="0 0 0" castshadow="false"/>
         <geom conaffinity="1" condim="4" name="floor" pos="0 0 -3.0" rgba="0.2 0.2 0.2 1" size="40 40 40" type="plane" material="MatPlane" friction="1 0.01 0.001"/>
         <body name="cursor" pos="0 0 0">
-            <geom type="sphere" size=".1" mass="0.01" contype="0" conaffinity="0" rgba="1 0 0 1"/>
+            <geom type="sphere" size=".1" mass="0.1" contype="0" conaffinity="0" rgba="1 0 0 1"/>
+            <geom type="capsule" fromto="0 0 0  .5 0 0" size="0.005" contype="0" conaffinity="0" rgba="1 0 0 1"/>
+            <geom type="capsule" fromto="0 0 0  0 .5 0" size="0.005" contype="0" conaffinity="0" rgba="0 1 0 1"/>
+            <geom type="capsule" fromto="0 0 0  0 0 .5" size="0.005" contype="0" conaffinity="0" rgba=".4 .6 1 1"/>
             <joint name="cursor_x" type="slide" range="-5 5" axis="1 0 0"/>
             <joint name="cursor_y" type="slide" range="-5 5" axis="0 1 0"/>
             <joint name="cursor_z" type="slide" range="-5 5" axis="0 0 1"/>
+            <joint name="cursor_w" type="hinge" axis="0 0 1"/>
+            <joint name="cursor_p" type="hinge" axis="0 1 0"/>
+            <joint name="cursor_r" type="hinge" axis="1 0 0"/>
         </body>
         <!-- <body pos="0 0 0">
             <geom type="capsule" fromto="0 0 0  1 0 0" size="0.005" contype="0" conaffinity="0" mass="1" rgba="1 0 0 1"/>
@@ -43,8 +49,11 @@
         <position name="j1" inheritrange="1" kp="500" kv="100" joint="j1"/>
         <position name="j2" inheritrange="1" kp="500" kv="100" joint="j2"/>
         <position name="j3" inheritrange="1" kp="100" kv="20" joint="j3"/>
-        <position name="cursor_x" inheritrange="0" kp="15" kv="2" joint="cursor_x"/>
-        <position name="cursor_y" inheritrange="0" kp="15" kv="2" joint="cursor_y"/>
-        <position name="cursor_z" inheritrange="0" kp="15" kv="2" joint="cursor_z"/>
+        <position name="cursor_x" inheritrange="0" kp="5" kv="2" joint="cursor_x"/>
+        <position name="cursor_y" inheritrange="0" kp="5" kv="2" joint="cursor_y"/>
+        <position name="cursor_z" inheritrange="0" kp="5" kv="2" joint="cursor_z"/>
+        <position name="cursor_w" inheritrange="0" kp="3" kv="1" joint="cursor_w"/>
+        <position name="cursor_p" inheritrange="0" kp="3" kv="1" joint="cursor_p"/>
+        <position name="cursor_r" inheritrange="0" kp="3" kv="1" joint="cursor_r"/>
     </actuator>
 </mujoco>

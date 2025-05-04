@@ -125,7 +125,7 @@ class InteractiveScene:
                 self.cam.lookat[1] = 0
                 self.cam.lookat[2] = 0
 
-    def run(self, steps=999999, j1=None, j2=None, j3=None, x=None, y=None, z=None, render=True):
+    def run(self, steps=999999, j1=None, j2=None, j3=None, x=None, y=None, z=None, w=None, p=None, r=None, render=True):
         while steps > 0 and not glfw.window_should_close(self.window):
             if kbhit():
                 input()
@@ -139,6 +139,12 @@ class InteractiveScene:
                 self.data.actuator('cursor_y').ctrl[0] = y
             if z is not None:
                 self.data.actuator('cursor_z').ctrl[0] = z
+            if w is not None:
+                self.data.actuator('cursor_w').ctrl[0] = w
+            if p is not None:
+                self.data.actuator('cursor_p').ctrl[0] = p
+            if r is not None:
+                self.data.actuator('cursor_r').ctrl[0] = r
 
             if j1 is not None:
                 self.data.actuator('j1').ctrl[0] = j1
@@ -205,13 +211,16 @@ def main():
     while True:
         steps = 3000000
         if input("press x for cursor, j for joints: ")[0] == 'x':
-            x = input("coordinates: ")
+            x = input("coordinates and rotation: ")
             if x:
-                x, y, z = x.strip().split()
+                x, y, z, w, p, r = x.strip().split()
                 x = float(x)
                 y = float(y)
                 z = float(z)
-                scene.run(steps/2, j1, j2, j3, x, y, z)
+                w = float(w)/DEG2RAD #yaW; y was already taken
+                p = float(p)/DEG2RAD #pitch
+                r = float(r)/DEG2RAD #roll
+                scene.run(steps/2, j1, j2, j3, x, y, z, w, p, r)
 
                 j1, j2, j3, xx ,yy ,zz = coords_to_angles(x, y, z)
                 print (f"ANGLES: {j1}, {j2}, {j3} ARM COORDS: {xx}, {yy}, {zz}")
