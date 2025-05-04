@@ -3,11 +3,16 @@ import numpy as np
 import glfw
 import argparse
 import time
+import sys, select
 
 DEG2RAD=57.2958
 f = open("claude3d.xml")
 MODEL_XML = f.read()
 f.close()
+
+def kbhit():
+	r = select.select([sys.stdin], [], [], 0.01)
+	return len(r[0]) > 0
 
 class InteractiveScene:
     def __init__(self):
@@ -122,6 +127,9 @@ class InteractiveScene:
 
     def run(self, steps=999999, j1=None, j2=None, j3=None, x=None, y=None, z=None, render=True):
         while steps > 0 and not glfw.window_should_close(self.window):
+            if kbhit():
+                input()
+                break
             steps -= 1
             time_prev = self.data.time
 
@@ -195,7 +203,7 @@ def main():
     scene = InteractiveScene()
     j1 = j2 = j3 = x = y = z = 0
     while True:
-        steps = 300
+        steps = 3000000
         if input("press x for cursor, j for joints: ")[0] == 'x':
             x = input("coordinates: ")
             if x:
