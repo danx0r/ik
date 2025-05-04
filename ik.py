@@ -191,10 +191,13 @@ def build_lookup():
     return lookup
 
 def coords_to_angles(x, y, z):
-    dist = (x**2 + y**2 + z**2) ** 0.5
-    ang = math.acos(dist / MAXDIST) * RAD2DEG
-    print ("C2A DIST:", dist, "ANG:", ang)
-    return 0, ang, ang*-2
+    xy = (x**2 + y**2) ** 0.5
+    xyz = (x**2 + y**2 + z**2) ** 0.5
+    yaw = math.acos(x/xy) * RAD2DEG
+    pitch = math.acos(xy/xyz) * RAD2DEG
+    ang = math.acos(xyz/MAXDIST) * RAD2DEG
+    print ("YAW:", yaw, "PITCH:", pitch, "ANG:", ang)
+    return yaw, pitch+ang, -2*ang
 
 def angles_to_coords(j1, j2, j3):
     for row in lookup:
