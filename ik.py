@@ -1,3 +1,4 @@
+import math
 import mujoco
 import numpy as np
 import glfw
@@ -6,6 +7,8 @@ import time
 import sys, select
 
 DEG2RAD=57.2958
+MAXDIST = 2
+
 f = open("claude3d.xml")
 MODEL_XML = f.read()
 f.close()
@@ -189,15 +192,18 @@ def build_lookup():
 
 def coords_to_angles(x, y, z):
     dist = (x**2 + y**2 + z**2) ** 0.5
-    print ("C2A DIST:", dist)
-    closest = 999999
-    for row in lookup:
-        dsq = (row[3]-x)**2 + (row[4]-y)**2 + (row[5]-z)**2
-        # print(dsq)
-        if dsq < closest:
-            closest = dsq
-            angles_coords = list(row)
-    return angles_coords
+    ang = math.acos(dist / MAXDIST) * DEG2RAD
+    print ("C2A DIST:", dist, "ANG:", ang)
+    return 0, ang, ang*-2, x, y, z
+    
+    # closest = 999999
+    # for row in lookup:
+    #     dsq = (row[3]-x)**2 + (row[4]-y)**2 + (row[5]-z)**2
+    #     # print(dsq)
+    #     if dsq < closest:
+    #         closest = dsq
+    #         angles_coords = list(row)
+    # return angles_coords
 
 def angles_to_coords(j1, j2, j3):
     for row in lookup:
