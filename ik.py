@@ -6,7 +6,7 @@ import argparse
 import time
 import sys, select
 
-DEG2RAD=57.2958
+RAD2DEG=57.2958
 MAXDIST = 2
 
 f = open("claude3d.xml")
@@ -192,18 +192,9 @@ def build_lookup():
 
 def coords_to_angles(x, y, z):
     dist = (x**2 + y**2 + z**2) ** 0.5
-    ang = math.acos(dist / MAXDIST) * DEG2RAD
+    ang = math.acos(dist / MAXDIST) * RAD2DEG
     print ("C2A DIST:", dist, "ANG:", ang)
-    return 0, ang, ang*-2, x, y, z
-    
-    # closest = 999999
-    # for row in lookup:
-    #     dsq = (row[3]-x)**2 + (row[4]-y)**2 + (row[5]-z)**2
-    #     # print(dsq)
-    #     if dsq < closest:
-    #         closest = dsq
-    #         angles_coords = list(row)
-    # return angles_coords
+    return 0, ang, ang*-2
 
 def angles_to_coords(j1, j2, j3):
     for row in lookup:
@@ -225,16 +216,16 @@ def main():
                 x = float(x)
                 y = float(y)
                 z = float(z)
-                w = float(w)/DEG2RAD #yaW; y was already taken
-                p = float(p)/DEG2RAD #pitch
-                r = float(r)/DEG2RAD #roll
+                w = float(w)/RAD2DEG #yaW; y was already taken
+                p = float(p)/RAD2DEG #pitch
+                r = float(r)/RAD2DEG #roll
                 scene.run(steps/2, j1, j2, j3, x, y, z, w, p, r)
 
-                j1, j2, j3, xx ,yy ,zz = coords_to_angles(x, y, z)
-                print (f"ANGLES: {j1}, {j2}, {j3} ARM COORDS: {xx}, {yy}, {zz}")
-                j1 = float(j1)/DEG2RAD
-                j2 = float(j2)/DEG2RAD
-                j3 = float(j3)/DEG2RAD
+                j1, j2, j3 = coords_to_angles(x, y, z)
+                print (f"ANGLES: {j1}, {j2}, {j3}")
+                j1 = float(j1)/RAD2DEG
+                j2 = float(j2)/RAD2DEG
+                j3 = float(j3)/RAD2DEG
         else:
             j = input("joint angles: ")
             if j:
@@ -244,9 +235,9 @@ def main():
                 j3 = float(j3)
                 x, y, z = angles_to_coords(j1, j2, j3)
                 print (f"ANGLES: {j1}, {j2}, {j3} COORDS: {x}, {y}, {z}")
-                j1 /= DEG2RAD
-                j2 /= DEG2RAD
-                j3 /= DEG2RAD
+                j1 /= RAD2DEG
+                j2 /= RAD2DEG
+                j3 /= RAD2DEG
 
         scene.run(steps, j1, j2, j3, x, y, z)
 
