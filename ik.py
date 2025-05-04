@@ -188,6 +188,8 @@ def build_lookup():
     return lookup
 
 def coords_to_angles(x, y, z):
+    dist = (x**2 + y**2 + z**2) ** 0.5
+    print ("C2A DIST:", dist)
     closest = 999999
     for row in lookup:
         dsq = (row[3]-x)**2 + (row[4]-y)**2 + (row[5]-z)**2
