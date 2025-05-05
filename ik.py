@@ -194,8 +194,12 @@ def coords_to_angles(x, y, z):
     xy = (x**2 + y**2) ** 0.5
     xyz = (x**2 + y**2 + z**2) ** 0.5
     yaw = math.acos(x/xy) * RAD2DEG
+    if y < 0:
+        yaw = -yaw
     pitch = math.acos(xy/xyz) * RAD2DEG
-    ang = math.acos(xyz/MAXDIST) * RAD2DEG
+    if z < 0:
+        pitch = -pitch
+    ang = math.acos(min(1, (xyz/MAXDIST))) * RAD2DEG
     print ("YAW:", yaw, "PITCH:", pitch, "ANG:", ang)
     return yaw, pitch+ang, -2*ang
 

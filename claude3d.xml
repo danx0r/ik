@@ -47,7 +47,7 @@
     <actuator>
         <position name="j1" kp="500" kv="100" joint="j1"/>
         <position name="j2" kp="500" kv="100" joint="j2"/>
-        <position name="j3" kp="100" kv="20" joint="j3"/>
+        <position name="j3" kp="500" kv="100" joint="j3"/>
         <position name="cursor_x" inheritrange="0" kp="5" kv="2" joint="cursor_x"/>
         <position name="cursor_y" inheritrange="0" kp="5" kv="2" joint="cursor_y"/>
         <position name="cursor_z" inheritrange="0" kp="5" kv="2" joint="cursor_z"/>
