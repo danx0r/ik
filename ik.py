@@ -191,6 +191,10 @@ def build_lookup():
 def coords_to_angles(x, y, z):
     xy = (x**2 + y**2) ** 0.5
     xyz = (x**2 + y**2 + z**2) ** 0.5
+    if xy==0:
+        xy = 0.0000001
+    if xyz==0:
+        xyz = 0.0000001 #OH yes I did
     yaw = math.acos(x/xy) * RAD2DEG
     if y < 0:
         yaw = -yaw
