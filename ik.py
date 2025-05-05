@@ -215,7 +215,12 @@ def main():
         if input("press x for cursor, j for joints: ")[0] == 'x':
             x = input("coordinates and rotation: ")
             if x:
-                x, y, z, w, p, r = x.strip().split()
+                inp = x.strip().split()
+                if len(inp) == 6:
+                    x, y, z, w, p, r = inp
+                else:
+                    x, y, z = inp
+                    w, p, r = (0, 0, 0)
                 x = float(x)
                 y = float(y)
                 z = float(z)
