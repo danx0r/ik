@@ -176,8 +176,6 @@ class InteractiveScene:
                 glfw.poll_events()
                 time.sleep(0.001)
 
-            # glfw.terminate()
-
 def build_lookup():
     lookup = []
     f = open("coords.csv")
@@ -209,6 +207,15 @@ def angles_to_coords(j1, j2, j3):
             return row[3:]
     print ("Angles not in lookup")
     return 0, 0, 0
+
+def calc_error():
+    endpt = scene.data.body("endpt").xpos
+    cursor = scene.data.body("cursor").xpos
+    # print ("CALC_ERROR", endpt, cursor)
+    tot = 0
+    for i in range(3):
+        tot += (endpt[i]-cursor[i])**2
+    return tot**.5
 
 def main():
     global scene
@@ -252,6 +259,7 @@ def main():
                 j3 /= RAD2DEG
 
         scene.run(steps, j1, j2, j3, x, y, z)
+        print ("ERROR:", calc_error())
 
 def create_lookup(fn, render=False, skip=5):
     global scene
