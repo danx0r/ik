@@ -196,12 +196,12 @@ def coords_to_angles(x, y, z):
     return yaw, pitch+ang, -2*ang
 
 def calc_error():
-    endpt = scene.data.body("endpt").xpos
+    target = scene.data.body("target").xpos
     cursor = scene.data.body("cursor").xpos
     # print ("CALC_ERROR", endpt, cursor)
     tot = 0
     for i in range(3):
-        tot += (endpt[i]-cursor[i])**2
+        tot += (target[i]-cursor[i])**2
     return tot**.5
 
 def main():
