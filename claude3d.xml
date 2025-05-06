@@ -10,7 +10,7 @@
         <geom conaffinity="1" condim="4" name="floor" pos="0 0 -3.0" rgba="0.2 0.2 0.2 1" size="40 40 40" type="plane" material="MatPlane" friction="1 0.01 0.001"/>
         <body name="cursor" pos="0 0 0">
             <geom type="sphere" size=".1" mass="0.1" contype="0" conaffinity="0" rgba="1 0 0 0.4"/>
-            <geom type="capsule" fromto="0 0 0  .15 0 0" size="0.0105" contype="0" conaffinity="0" rgba="1 0 0 1"/>
+            <geom type="capsule" fromto="0 0 0  .3 0 0" size="0.0205" contype="0" conaffinity="0" rgba="1 0 0 1"/>
             <geom type="capsule" fromto="0 0 0  0 .15 0" size="0.0105" contype="0" conaffinity="0" rgba="0 1 0 1"/>
             <geom type="capsule" fromto="0 0 0  0 0 .15" size="0.0105" contype="0" conaffinity="0" rgba=".2 .3 1 1"/>
             <joint name="cursor_x" type="slide" range="-5 5" axis="1 0 0"/>
