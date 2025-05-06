@@ -156,6 +156,8 @@ class InteractiveScene:
                 self.data.actuator('j2').ctrl[0] = j2
             if j3 is not None:
                 self.data.actuator('j3').ctrl[0] = j3
+            if j4 is not None:
+                self.data.actuator('j4').ctrl[0] = j4
 
             while (self.data.time - time_prev < 1.0/60.0):
                 mujoco.mj_step(self.model, self.data)
@@ -226,7 +228,9 @@ def main():
             j2 = float(j2)/RAD2DEG
             j3 = float(j3)/RAD2DEG
 
-        scene.run(steps, j1, j2, j3, j4, x, y, z)
+            j4 = j3+p
+
+        scene.run(steps, j1, j2, j3, j4, x, y, z, p)
         print ("ERROR:", calc_error())
 
 if __name__ == "__main__":
