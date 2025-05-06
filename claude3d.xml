@@ -16,7 +16,7 @@
             <joint name="cursor_x" type="slide" range="-5 5" axis="1 0 0"/>
             <joint name="cursor_y" type="slide" range="-5 5" axis="0 1 0"/>
             <joint name="cursor_z" type="slide" range="-5 5" axis="0 0 1"/>
-            <joint name="cursor_p" type="hinge" axis="0 1 0"/>
+            <joint name="cursor_p" type="hinge" axis="0 -1 0"/>
             <!-- <joint name="cursor_w" type="hinge" axis="0 0 1"/>
             <joint name="cursor_r" type="hinge" axis="1 0 0"/> -->
         </body>

@@ -227,8 +227,8 @@ def main():
             j1 = float(j1)/RAD2DEG
             j2 = float(j2)/RAD2DEG
             j3 = float(j3)/RAD2DEG
-
-            j4 = j3+p
+            j4 = -j3 - j2 + p
+            print ("P J2 J3 J4", p*RAD2DEG, j2*RAD2DEG, j3*RAD2DEG, j4*RAD2DEG)
 
         scene.run(steps, j1, j2, j3, j4, x, y, z, p)
         print ("ERROR:", calc_error())
