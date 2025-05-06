@@ -212,7 +212,7 @@ def main():
         steps = 3000000
         x = input("coordinates and rotation: ")
         if x:
-            poff = 0.3
+            poff = 0.3          #length of last segment ('twixt j4 & endpt)
             inp = x.strip().split()
             x, y, z, p = inp
             x = float(x)
@@ -233,7 +233,7 @@ def main():
             j4 = -j3 - j2 + p
             print ("P J2 J3 J4", p*RAD2DEG, j2*RAD2DEG, j3*RAD2DEG, j4*RAD2DEG)
 
-        scene.run(steps, j1, j2, j3, j4, x, y, z, p)
+        scene.run(steps, j1, j2, j3, j4)
         print ("ERROR:", calc_error())
 
 if __name__ == "__main__":
