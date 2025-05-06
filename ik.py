@@ -128,7 +128,8 @@ class InteractiveScene:
                 self.cam.lookat[1] = 0
                 self.cam.lookat[2] = 0
 
-    def run(self, steps=999999, j1=None, j2=None, j3=None, x=None, y=None, z=None, w=None, p=None, r=None, render=True):
+    def run(self, steps=999999, j1=None, j2=None, j3=None, x=None, y=None, z=None, p=None, w=None, r=None, render=True):
+        # self.data.actuator('j4').ctrl[0] = 1.57
         while steps > 0 and not glfw.window_should_close(self.window):
             if kbhit():
                 input()
@@ -142,10 +143,10 @@ class InteractiveScene:
                 self.data.actuator('cursor_y').ctrl[0] = y
             if z is not None:
                 self.data.actuator('cursor_z').ctrl[0] = z
-            if w is not None:
-                self.data.actuator('cursor_w').ctrl[0] = w
             if p is not None:
                 self.data.actuator('cursor_p').ctrl[0] = p
+            if w is not None:
+                self.data.actuator('cursor_w').ctrl[0] = w
             if r is not None:
                 self.data.actuator('cursor_r').ctrl[0] = r
 
@@ -202,7 +203,6 @@ def coords_to_angles(x, y, z):
     if z < 0:
         pitch = -pitch
     ang = math.acos(min(1, (xyz/MAXDIST))) * RAD2DEG
-    print ("YAW:", yaw, "PITCH:", pitch, "ANG:", ang)
     return yaw, pitch+ang, -2*ang
 
 def angles_to_coords(j1, j2, j3):
@@ -232,17 +232,17 @@ def main():
             if x:
                 inp = x.strip().split()
                 if len(inp) == 6:
-                    x, y, z, w, p, r = inp
+                    x, y, z, p, w, r = inp
                 else:
                     x, y, z = inp
-                    w, p, r = (0, 0, 0)
+                    p, w, r = (0, 0, 0)
                 x = float(x)
                 y = float(y)
                 z = float(z)
-                w = float(w)/RAD2DEG #yaW; y was already taken
                 p = float(p)/RAD2DEG #pitch
+                w = float(w)/RAD2DEG #yaW; y was already taken
                 r = float(r)/RAD2DEG #roll
-                scene.run(steps/2, j1, j2, j3, x, y, z, w, p, r)
+                scene.run(steps/2, j1, j2, j3, x, y, z, p, w, r)
 
                 j1, j2, j3 = coords_to_angles(x, y, z)
                 print (f"ANGLES: {j1}, {j2}, {j3}")
