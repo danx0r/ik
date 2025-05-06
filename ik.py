@@ -128,7 +128,7 @@ class InteractiveScene:
                 self.cam.lookat[1] = 0
                 self.cam.lookat[2] = 0
 
-    def run(self, steps=999999, j1=None, j2=None, j3=None, x=None, y=None, z=None, p=None, w=None, r=None, render=True):
+    def run(self, steps=999999, j1=None, j2=None, j3=None, x=None, y=None, z=None, p=None, render=True):
         # self.data.actuator('j4').ctrl[0] = 1.57
         while steps > 0 and not glfw.window_should_close(self.window):
             if kbhit():
@@ -145,10 +145,10 @@ class InteractiveScene:
                 self.data.actuator('cursor_z').ctrl[0] = z
             if p is not None:
                 self.data.actuator('cursor_p').ctrl[0] = p
-            if w is not None:
-                self.data.actuator('cursor_w').ctrl[0] = w
-            if r is not None:
-                self.data.actuator('cursor_r').ctrl[0] = r
+            # if w is not None:
+            #     self.data.actuator('cursor_w').ctrl[0] = w
+            # if r is not None:
+            #     self.data.actuator('cursor_r').ctrl[0] = r
 
             if j1 is not None:
                 self.data.actuator('j1').ctrl[0] = j1
@@ -177,18 +177,6 @@ class InteractiveScene:
                 glfw.poll_events()
                 time.sleep(0.001)
 
-def build_lookup():
-    lookup = []
-    f = open("coords.csv")
-    for row in f.readlines():
-        row = row.strip().split(",")
-        row.pop(4)
-        row.pop(0)
-        row = [float(x) for x in row]
-        lookup.append(row)
-        # break
-    return lookup
-
 def coords_to_angles(x, y, z):
     xy = (x**2 + y**2) ** 0.5
     xyz = (x**2 + y**2 + z**2) ** 0.5
@@ -205,13 +193,6 @@ def coords_to_angles(x, y, z):
     ang = math.acos(min(1, (xyz/MAXDIST))) * RAD2DEG
     return yaw, pitch+ang, -2*ang
 
-def angles_to_coords(j1, j2, j3):
-    for row in lookup:
-        if row[0] == j1 and row[1] == j2 and row[2] == j3:
-            return row[3:]
-    print ("Angles not in lookup")
-    return 0, 0, 0
-
 def calc_error():
     endpt = scene.data.body("endpt").xpos
     cursor = scene.data.body("cursor").xpos
@@ -227,67 +208,31 @@ def main():
     j1 = j2 = j3 = x = y = z = 0
     while True:
         steps = 3000000
-        if input("press x for cursor, j for joints: ")[0] == 'x':
-            x = input("coordinates and rotation: ")
-            if x:
-                inp = x.strip().split()
-                if len(inp) == 6:
-                    x, y, z, p, w, r = inp
-                else:
-                    x, y, z = inp
-                    p, w, r = (0, 0, 0)
-                x = float(x)
-                y = float(y)
-                z = float(z)
-                p = float(p)/RAD2DEG #pitch
-                w = float(w)/RAD2DEG #yaW; y was already taken
-                r = float(r)/RAD2DEG #roll
-                scene.run(steps/2, j1, j2, j3, x, y, z, p, w, r)
+        x = input("coordinates and rotation: ")
+        if x:
+            inp = x.strip().split()
+            x, y, z, p = inp
+            x = float(x)
+            y = float(y)
+            z = float(z)
+            p = float(p)/RAD2DEG #pitch
+            # w = float(w)/RAD2DEG #yaW; y was already taken
+            # r = float(r)/RAD2DEG #roll
+            scene.run(steps/2, j1, j2, j3, x, y, z, p)
 
-                j1, j2, j3 = coords_to_angles(x, y, z)
-                print (f"ANGLES: {j1}, {j2}, {j3}")
-                j1 = float(j1)/RAD2DEG
-                j2 = float(j2)/RAD2DEG
-                j3 = float(j3)/RAD2DEG
-        else:
-            j = input("joint angles: ")
-            if j:
-                j1, j2, j3 = j.strip().split()
-                j1 = float(j1)
-                j2 = float(j2)
-                j3 = float(j3)
-                x, y, z = angles_to_coords(j1, j2, j3)
-                print (f"ANGLES: {j1}, {j2}, {j3} COORDS: {x}, {y}, {z}")
-                j1 /= RAD2DEG
-                j2 /= RAD2DEG
-                j3 /= RAD2DEG
+            j1, j2, j3 = coords_to_angles(x, y, z)
+            print (f"ANGLES: {j1}, {j2}, {j3}")
+            j1 = float(j1)/RAD2DEG
+            j2 = float(j2)/RAD2DEG
+            j3 = float(j3)/RAD2DEG
 
         scene.run(steps, j1, j2, j3, x, y, z)
         print ("ERROR:", calc_error())
 
-def create_lookup(fn, render=False, skip=5):
-    global scene
-    scene = InteractiveScene()
-    f = open(fn, 'w')
-    for j1 in range(-90, 95, skip):
-        for j2 in range(-90, 185, skip):
-            for j3 in range(0, 185, skip):
-                steps = 1000
-                scene.run(steps, j1/57.2958, j2/57.2958, j3/57.2958, render=render)
-                coords = scene.data.body("endpt").xpos
-                print (f"angles, {j1}, {j2}, {j3}, coords, {coords[0]:.5f}, {coords[1]:.5f}, {coords[2]:.5f}", file=f)
-                f.flush()
-    f.close()
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--create_lookup")
     parser.add_argument("--render", action="store_true")
     parser.add_argument("--skip", type=int)
     args = parser.parse_args()
 
-    if args.create_lookup:
-        create_lookup(args.create_lookup, args.render, args.skip)
-    else:
-        lookup = build_lookup()
-        main()
+    main()
