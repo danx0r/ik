@@ -212,6 +212,7 @@ def main():
         steps = 3000000
         x = input("coordinates and rotation: ")
         if x:
+            poff = 0.3
             inp = x.strip().split()
             x, y, z, p = inp
             x = float(x)
@@ -223,6 +224,8 @@ def main():
             scene.run(steps/2, j1, j2, j3, j4, x, y, z, p)
 
             j1, j2, j3 = coords_to_angles(x, y, z)
+            x -= math.cos(p) * poff
+            z -= math.sin(p) * poff
             print (f"ANGLES: {j1}, {j2}, {j3}")
             j1 = float(j1)/RAD2DEG
             j2 = float(j2)/RAD2DEG
