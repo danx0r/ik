@@ -87,6 +87,10 @@ class InteractiveScene:
         self.cam.distance = max(self.cam.distance - yoffset * 0.5, 0.5)
 
     def run(self, steps=999999, j1=None, j2=None, j3=None, j4=None, j5=None, j6=None, x=None, y=None, z=None, p=None, w=None, r=None, render=True):
+        # self.data.body("cursor").xpos[0]=1
+        # print ("DBG", self.data.body("cursor").xpos)
+        self.data.mocap_pos[0]=[1.5, -.6, .2]
+        self.data.mocap_quat[0]=[.5, .5, .5, .5]
         while steps > 0 and not glfw.window_should_close(self.window):
             if kbhit():
                 input()
@@ -94,31 +98,31 @@ class InteractiveScene:
             steps -= 1
             time_prev = self.data.time
 
-            if x is not None:
-                self.data.actuator('cursor_x').ctrl[0] = x
-            if y is not None:
-                self.data.actuator('cursor_y').ctrl[0] = y
-            if z is not None:
-                self.data.actuator('cursor_z').ctrl[0] = z
-            if p is not None:
-                self.data.actuator('cursor_p').ctrl[0] = p
-            if w is not None:
-                self.data.actuator('cursor_w').ctrl[0] = w
+            # if x is not None:
+            #     self.data.actuator('cursor_x').ctrl[0] = x
+            # if y is not None:
+            #     self.data.actuator('cursor_y').ctrl[0] = y
+            # if z is not None:
+            #     self.data.actuator('cursor_z').ctrl[0] = z
+            # if p is not None:
+            #     self.data.actuator('cursor_p').ctrl[0] = p
+            # if w is not None:
+            #     self.data.actuator('cursor_w').ctrl[0] = w
             # if r is not None:
             #     self.data.actuator('cursor_r').ctrl[0] = r
 
-            if j1 is not None:
-                self.data.actuator('j1').ctrl[0] = j1
-            if j2 is not None:
-                self.data.actuator('j2').ctrl[0] = j2
-            if j3 is not None:
-                self.data.actuator('j3').ctrl[0] = j3
-            if j4 is not None:
-                self.data.actuator('j4').ctrl[0] = j4
-            if j5 is not None:
-                self.data.actuator('j5').ctrl[0] = j5
-            if j6 is not None:
-                self.data.actuator('j5').ctrl[0] = j6
+            # if j1 is not None:
+            #     self.data.actuator('j1').ctrl[0] = j1
+            # if j2 is not None:
+            #     self.data.actuator('j2').ctrl[0] = j2
+            # if j3 is not None:
+            #     self.data.actuator('j3').ctrl[0] = j3
+            # if j4 is not None:
+            #     self.data.actuator('j4').ctrl[0] = j4
+            # if j5 is not None:
+            #     self.data.actuator('j5').ctrl[0] = j5
+            # if j6 is not None:
+            #     self.data.actuator('j5').ctrl[0] = j6
 
             while (self.data.time - time_prev < 1.0/60.0):
                 mujoco.mj_step(self.model, self.data)
@@ -139,6 +143,7 @@ class InteractiveScene:
                 glfw.swap_buffers(self.window)
                 glfw.poll_events()
                 time.sleep(0.001)
+        print ("RUN DONE")
 
 def coords_to_angles(x, y, z, pitch, yaw, roll):
     xy = (x**2 + y**2) ** 0.5
