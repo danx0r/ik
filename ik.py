@@ -44,7 +44,7 @@ class InteractiveScene:
         glfw.set_mouse_button_callback(self.window, self._mouse_button)
         glfw.set_cursor_pos_callback(self.window, self._mouse_move)
         glfw.set_scroll_callback(self.window, self._scroll)
-        glfw.set_key_callback(self.window, self._keyboard)
+        # glfw.set_key_callback(self.window, self._keyboard)
 
         # Load model and create data
         self.model = mujoco.MjModel.from_xml_string(MODEL_XML)
@@ -86,47 +86,6 @@ class InteractiveScene:
 
     def _scroll(self, window, xoffset, yoffset):
         self.cam.distance = max(self.cam.distance - yoffset * 0.5, 0.5)
-
-    def _keyboard(self, window, key, scancode, act, mods):
-        if act == glfw.PRESS or act == glfw.REPEAT:
-            # Camera rotation
-            if key == glfw.KEY_LEFT:
-                self.cam.azimuth += self.rotation_speed
-            elif key == glfw.KEY_RIGHT:
-                self.cam.azimuth -= self.rotation_speed
-            elif key == glfw.KEY_UP:
-                self.cam.elevation = min(self.cam.elevation + self.rotation_speed, 90)
-            elif key == glfw.KEY_DOWN:
-                self.cam.elevation = max(self.cam.elevation - self.rotation_speed, -90)
-            
-            # Camera zoom
-            elif key == glfw.KEY_Z:
-                self.cam.distance = max(self.cam.distance - self.zoom_speed, 0.5)
-            elif key == glfw.KEY_X:
-                self.cam.distance += self.zoom_speed
-                
-            # Camera panning
-            elif key == glfw.KEY_W:
-                self.cam.lookat[1] += self.pan_speed
-            elif key == glfw.KEY_S:
-                self.cam.lookat[1] -= self.pan_speed
-            elif key == glfw.KEY_A:
-                self.cam.lookat[0] -= self.pan_speed
-            elif key == glfw.KEY_D:
-                self.cam.lookat[0] += self.pan_speed
-            elif key == glfw.KEY_Q:
-                self.cam.lookat[2] += self.pan_speed
-            elif key == glfw.KEY_E:
-                self.cam.lookat[2] -= self.pan_speed
-                
-            # Reset camera
-            elif key == glfw.KEY_SPACE:
-                self.cam.distance = 3.0
-                self.cam.azimuth = 90.0
-                self.cam.elevation = -45.0
-                self.cam.lookat[0] = 0
-                self.cam.lookat[1] = 0
-                self.cam.lookat[2] = 0
 
     def run(self, steps=999999, j1=None, j2=None, j3=None, j4=None, x=None, y=None, z=None, p=None, render=True):
         # self.data.actuator('j4').ctrl[0] = 1.57
