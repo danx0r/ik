@@ -86,8 +86,7 @@ class InteractiveScene:
     def _scroll(self, window, xoffset, yoffset):
         self.cam.distance = max(self.cam.distance - yoffset * 0.5, 0.5)
 
-    def run(self, steps=999999, j1=None, j2=None, j3=None, j4=None, j5=None, x=None, y=None, z=None, p=None, w=None, render=True):
-        # self.data.actuator('j5').ctrl[0] = 1
+    def run(self, steps=999999, j1=None, j2=None, j3=None, j4=None, j5=None, j6=None, x=None, y=None, z=None, p=None, w=None, r=None, render=True):
         while steps > 0 and not glfw.window_should_close(self.window):
             if kbhit():
                 input()
@@ -105,8 +104,8 @@ class InteractiveScene:
                 self.data.actuator('cursor_p').ctrl[0] = p
             if w is not None:
                 self.data.actuator('cursor_w').ctrl[0] = w
-            # if r is not None:
-            #     self.data.actuator('cursor_r').ctrl[0] = r
+            if r is not None:
+                self.data.actuator('cursor_r').ctrl[0] = r
 
             if j1 is not None:
                 self.data.actuator('j1').ctrl[0] = j1
@@ -117,7 +116,9 @@ class InteractiveScene:
             if j4 is not None:
                 self.data.actuator('j4').ctrl[0] = j4
             if j5 is not None:
-                self.data.actuator('j5').ctrl[0] = j4
+                self.data.actuator('j5').ctrl[0] = j5
+            if j6 is not None:
+                self.data.actuator('j5').ctrl[0] = j6
 
             while (self.data.time - time_prev < 1.0/60.0):
                 mujoco.mj_step(self.model, self.data)
@@ -139,21 +140,15 @@ class InteractiveScene:
                 glfw.poll_events()
                 time.sleep(0.001)
 
-def coords_to_angles(x, y, z):
+def coords_to_angles(x, y, z, pitch, yaw, roll):
     xy = (x**2 + y**2) ** 0.5
     xyz = (x**2 + y**2 + z**2) ** 0.5
     if xy==0:
         xy = 0.0000001
     if xyz==0:
         xyz = 0.0000001 #OH yes I did
-    yaw = math.acos(x/xy) * RAD2DEG
-    if y < 0:
-        yaw = -yaw
-    pitch = math.acos(xy/xyz) * RAD2DEG
-    if z < 0:
-        pitch = -pitch
     ang = math.acos(min(1, (xyz/MAXDIST))) * RAD2DEG
-    return yaw, pitch+ang, -2*ang
+    return yaw, ang, -2*ang, 0, 0, 0
 
 def calc_error():
     target = scene.data.body("target").xpos
@@ -167,34 +162,23 @@ def calc_error():
 def main():
     global scene
     scene = InteractiveScene()
-    j1 = j2 = j3 = j4 = j5 = x = y = z = 0
+    j1 = j2 = j3 = j4 = j5 = j6 = x = y = z = 0
     while True:
-        steps = 3000000
+        steps = 300
         x = input("coordinates and rotation: ")
         if x:
             poff = 0.2          #length of last segment ('twixt j4 & endpt)
             inp = x.strip().split()
-            x, y, z, p, w = inp
+            x, y, z, p, w, r = inp
             x = float(x)
             y = float(y)
             z = float(z)
             p = float(p)/RAD2DEG #pitch
             w = float(w)/RAD2DEG #yaW; y was already taken
-            # r = float(r)/RAD2DEG #roll
-            scene.run(steps/2, j1, j2, j3, j4, j5, x, y, z, p, w)
-
-            j1, j2, j3 = coords_to_angles(x, y, z)
-            x -= math.cos(p) * poff
-            z -= math.sin(p) * poff
-            print (f"ANGLES: {j1}, {j2}, {j3}")
-            j1 = float(j1)/RAD2DEG
-            j2 = float(j2)/RAD2DEG
-            j3 = float(j3)/RAD2DEG
-            j4 = -j3 - j2 + p
-            j5 = w
-            print ("P J2 J3 J4 J5", p*RAD2DEG, j2*RAD2DEG, j3*RAD2DEG, j4*RAD2DEG, j5*RAD2DEG)
-
-        scene.run(steps, j1, j2, j3, j4, j5)
+            r = float(r)/RAD2DEG #roll
+            scene.run(steps, j1, j2, j3, j4, j5, j6, x, y, z, p, w, r)
+            j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, p, w, r)
+        scene.run(steps, j1, j2, j3, j4, j5, j6)
         print ("ERROR:", calc_error())
 
 if __name__ == "__main__":

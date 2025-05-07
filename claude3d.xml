@@ -17,6 +17,7 @@
             <joint name="cursor_z" type="slide" range="-5 5" axis="0 0 1"/>
             <joint name="cursor_p" type="hinge" axis="0 -1 0"/>
             <joint name="cursor_w" type="hinge" axis="0 0 1"/>
+            <joint name="cursor_r" type="hinge" axis="1 0 0"/>
         </body>
         <!-- <body pos="0 0 0">
             <geom type="capsule" fromto="0 0 0  1 0 0" size="0.005" contype="0" conaffinity="0" mass="1" rgba="1 0 0 1"/>
@@ -69,6 +70,6 @@
         <position name="cursor_z" inheritrange="0" kp="5" kv="2" joint="cursor_z"/>
         <position name="cursor_p" kp="3" kv="1" joint="cursor_p"/>
         <position name="cursor_w" kp="3" kv="1" joint="cursor_w"/>
-        <!-- <position name="cursor_r" kp="3" kv="1" joint="cursor_r"/> -->
+        <position name="cursor_r" kp="3" kv="1" joint="cursor_r"/>
     </actuator>
 </mujoco>
