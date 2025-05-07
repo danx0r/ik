@@ -38,16 +38,20 @@
                     <joint name="j3" type="hinge" axis="0 -1 0"/>
                     <geom type="capsule" fromto="0 -.2 0 0 0.2 0" size="0.007" contype="0" conaffinity="0" rgba=".7 .8 0 .6"/>
                     <body name="target" pos="1 0 0">
-                        <geom type="box" size="0.06" fromto="0 0 0 0.2 0 0" rgba="0.8 0.6 0.2 0.4"/>
+                        <geom type="box" size="0.06" fromto="0 0 0 0.2 0 0" rgba="0.8 0.6 0.2 1"/>
                         <joint name="j4" type="hinge" axis="0 -1 0"/>
-                        <body name="endpt" pos="0.17 0 0">
-                            <geom type="capsule" size="0.02" fromto="0 0 0 0.15 0 0"/>
-                            <geom pos="0.2 0 0.001" type="box" size="0.06 0.04 0.001" rgba="1 1 0 1"/>
-                            <geom pos="0.2 0 -.001" type="box" size="0.06 0.04 0.001" rgba="0 1 1 1"/>
-                            <!-- <geom type="sphere" size=".1" mass="0.0001"/>
-                            <geom type="capsule" fromto="0 0 0  .25 0 0" size="0.005" contype="0" conaffinity="0" mass="0" rgba="1 0 0 1"/>
-                            <geom type="capsule" fromto="0 0 0  0 .25 0" size="0.005" contype="0" conaffinity="0" mass="0" rgba="0 1 0 1"/>
-                            <geom type="capsule" fromto="0 0 0  0 0 .25" size="0.005" contype="0" conaffinity="0" mass="0" rgba=".3 .5 1 1"/> -->
+                        <body pos="0.2 0 0">
+                            <joint name="j5" type="hinge" axis="0 0 1"/>
+                            <geom type="box" size="0.06" fromto="0 0 0 0.16 0 0" rgba="0.9 0.2 0.5 1"/>
+                            <body name="endpt" pos="0.17 0 0">
+                                <geom type="capsule" size="0.02" fromto="0 0 0 0.15 0 0"/>
+                                <geom pos="0.2 0 0.001" type="box" size="0.06 0.04 0.001" rgba="1 1 0 1"/>
+                                <geom pos="0.2 0 -.001" type="box" size="0.06 0.04 0.001" rgba="0 1 1 1"/>
+                                <!-- <geom type="sphere" size=".1" mass="0.0001"/>
+                                <geom type="capsule" fromto="0 0 0  .25 0 0" size="0.005" contype="0" conaffinity="0" mass="0" rgba="1 0 0 1"/>
+                                <geom type="capsule" fromto="0 0 0  0 .25 0" size="0.005" contype="0" conaffinity="0" mass="0" rgba="0 1 0 1"/>
+                                <geom type="capsule" fromto="0 0 0  0 0 .25" size="0.005" contype="0" conaffinity="0" mass="0" rgba=".3 .5 1 1"/> -->
+                            </body>
                         </body>
                     </body>
                 </body>
