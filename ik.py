@@ -44,7 +44,6 @@ class InteractiveScene:
         glfw.set_mouse_button_callback(self.window, self._mouse_button)
         glfw.set_cursor_pos_callback(self.window, self._mouse_move)
         glfw.set_scroll_callback(self.window, self._scroll)
-        # glfw.set_key_callback(self.window, self._keyboard)
 
         # Load model and create data
         self.model = mujoco.MjModel.from_xml_string(MODEL_XML)
