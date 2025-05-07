@@ -104,8 +104,8 @@ class InteractiveScene:
                 self.data.actuator('cursor_p').ctrl[0] = p
             if w is not None:
                 self.data.actuator('cursor_w').ctrl[0] = w
-            if r is not None:
-                self.data.actuator('cursor_r').ctrl[0] = r
+            # if r is not None:
+            #     self.data.actuator('cursor_r').ctrl[0] = r
 
             if j1 is not None:
                 self.data.actuator('j1').ctrl[0] = j1
@@ -148,7 +148,7 @@ def coords_to_angles(x, y, z, pitch, yaw, roll):
     if xyz==0:
         xyz = 0.0000001 #OH yes I did
     ang = math.acos(min(1, (xyz/MAXDIST))) * RAD2DEG
-    return yaw, ang, -2*ang, 0, 0, 0
+    return 0, 0, 0, 0, 0, 0
 
 def calc_error():
     target = scene.data.body("target").xpos
