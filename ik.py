@@ -89,8 +89,11 @@ class InteractiveScene:
     def run(self, steps=999999, j1=None, j2=None, j3=None, j4=None, j5=None, j6=None, x=None, y=None, z=None, p=None, w=None, r=None, render=True):
         # self.data.body("cursor").xpos[0]=1
         # print ("DBG", self.data.body("cursor").xpos)
-        self.data.mocap_pos[0]=[1.5, -.6, .2]
-        self.data.mocap_quat[0]=[.5, .5, .5, .5]
+        self.data.mocap_pos[0]=[-.5, 0, 0]
+        self.data.mocap_quat[0]=[1, 0, -.4, 0]                          #pitch nose up 45 degrees
+        # self.data.mocap_quat[0]=[1, 0, 0, -.4]                          #yaw 45 degrees clockwise (top view)
+        # self.data.mocap_quat[0]=[1, .4, 0, 0]                           #roll 45 degrees clockwise/bank right
+        # self.data.mocap_quat[0]=[1, 0, -.2, .1]                           #nose up 25 deg, yaw 13 deg left (a bit of roll innit)
         while steps > 0 and not glfw.window_should_close(self.window):
             if kbhit():
                 input()
@@ -169,7 +172,7 @@ def main():
     scene = InteractiveScene()
     j1 = j2 = j3 = j4 = j5 = j6 = x = y = z = 0
     while True:
-        steps = 300
+        steps = 3000
         x = input("coordinates and rotation: ")
         if x:
             poff = 0.2          #length of last segment ('twixt j4 & endpt)
