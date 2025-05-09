@@ -140,196 +140,218 @@ class InteractiveScene:
                 time.sleep(0.001)
         print ("RUN DONE")
 
-def coords_to_angles_4dof(x, y, z, qw, qx, qy, qz):
+def coords_to_angles_5dof(x, y, z, qw, qx, qy, qz):
     """
-    4-DOF inverse kinematics that positions j5 at the target position.
+    5-DOF inverse kinematics that positions the endpoint (the j6 origin) at the target position.
     
     Args:
-        x, y, z: Target position coordinates (where j5 should be)
+        x, y, z: Target position coordinates (where endpoint should be)
         qw, qx, qy, qz: Target orientation as quaternion
         
     Returns:
-        j1, j2, j3, j4: First four joint angles in radians
+        j1, j2, j3, j4, j5: First five joint angles in radians
     """
     # Link lengths from the XML file
-    link1_length = 1.0  # First arm segment (j2 to j3)
-    link2_length = 1.0  # Second arm segment (j3 to j4)
-    link3_length = 0.2  # Third arm segment (j4 to j5/target)
+    link1_length = 1.0    # First arm segment (j2 to j3)
+    link2_length = 1.0    # Second arm segment (j3 to j4)
+    link3_length = 0.2    # Third arm segment (j4 to j5)
+    link4_length = 0.17   # Fourth segment (j5 to endpoint/j6)
+    
+    # Convert quaternion to rotation matrix for orientation
+    target_rot = np.array([
+        [1 - 2*(qy*qy + qz*qz), 2*(qx*qy - qw*qz), 2*(qx*qz + qw*qy)],
+        [2*(qx*qy + qw*qz), 1 - 2*(qx*qx + qz*qz), 2*(qy*qz - qw*qx)],
+        [2*(qx*qz - qw*qy), 2*(qy*qz + qw*qx), 1 - 2*(qx*qx + qy*qy)]
+    ])
+    
+    # Extract the target direction (x-axis of the target orientation)
+    target_direction = target_rot[:, 0]
     
     # Step 1: Solve for j1 (base rotation)
     j1 = math.atan2(y, x)
     
     # Step 2: Calculate the target position in the frame after j1 rotation
     c1, s1 = math.cos(j1), math.sin(j1)
+    R1 = np.array([
+        [c1, -s1, 0],
+        [s1, c1, 0],
+        [0, 0, 1]
+    ])
     
-    # Target position in frame after j1 rotation (rotated to xz-plane)
+    # Target position in rotated frame (after j1)
     x_r = c1 * x + s1 * y
     z_r = z
     
-    # Calculate the distance from the base to the target
-    r = math.sqrt(x_r**2 + z_r**2)
+    # Calculate j5 position by moving backward from target along target direction
+    # Rotate target direction to the frame after j1
+    target_dir_j1 = R1.T @ target_direction
+    target_dir_j1_norm = target_dir_j1 / np.linalg.norm(target_dir_j1)
     
-    # Check if the target is reachable
-    max_reach = link1_length + link2_length + link3_length
-    if r > max_reach:
-        scale = max_reach / r
-        x_r *= scale
-        z_r *= scale
-        r = max_reach
-        print(f"Warning: Target out of reach, scaled to maximum distance")
+    # j5 position in rotated frame
+    j5_pos_x = x_r - link4_length * target_dir_j1_norm[0]
+    j5_pos_z = z_r - link4_length * target_dir_j1_norm[2]
     
-    # Step 3: Use a geometric approach to solve the 3-link manipulator
+    # Now calculate j4 position by moving again along target direction
+    j4_pos_x = j5_pos_x - link3_length * target_dir_j1_norm[0]
+    j4_pos_z = j5_pos_z - link3_length * target_dir_j1_norm[2]
     
-    # We can formulate this as a geometric problem in the xz-plane
-    # Let's define coordinates: j2 is at origin (0,0), target is at (x_r, z_r)
+    # Calculate the distance from j2 to j4
+    r_j4 = math.sqrt(j4_pos_x**2 + j4_pos_z**2)
     
-    # Using the law of cosines to solve for j3
-    # Distance from j2 to target
-    d = r
+    # Check if j4 position is reachable with link1 and link2
+    max_reach_j4 = link1_length + link2_length
+    if r_j4 > max_reach_j4:
+        scale = max_reach_j4 / r_j4
+        j4_pos_x *= scale
+        j4_pos_z *= scale
+        r_j4 = max_reach_j4
+        print(f"Warning: j4 position not reachable, scaled")
     
-    # Calculate j3
-    cos_j3 = (d**2 - link1_length**2 - (link2_length + link3_length)**2) / (2 * link1_length * (link2_length + link3_length))
+    # Step 3: Solve for j2 and j3 to position j4
+    cos_j3 = (r_j4**2 - link1_length**2 - link2_length**2) / (2 * link1_length * link2_length)
     cos_j3 = max(min(cos_j3, 1.0), -1.0)
     j3 = -math.acos(cos_j3)  # Negative due to joint direction
     
-    # Calculate j2
-    beta = math.atan2(z_r, x_r)
-    cos_gamma = (link1_length**2 + d**2 - (link2_length + link3_length)**2) / (2 * link1_length * d)
+    beta = math.atan2(j4_pos_z, j4_pos_x)
+    cos_gamma = (link1_length**2 + r_j4**2 - link2_length**2) / (2 * link1_length * r_j4)
     cos_gamma = max(min(cos_gamma, 1.0), -1.0)
     gamma = math.acos(cos_gamma)
     j2 = beta + gamma
     
-    # Calculate j4 (needs to be 0 to keep link2 and link3 as a straight line)
-    j4 = 0
+    # Step 4: Calculate orientation of the arm at j4
+    c2, s2 = math.cos(j2), math.sin(j2)
+    R2 = np.array([
+        [c2, 0, s2],
+        [0, 1, 0],
+        [-s2, 0, c2]
+    ])
+    
+    c3, s3 = math.cos(j3), math.sin(j3)
+    R3 = np.array([
+        [c3, 0, s3],
+        [0, 1, 0],
+        [-s3, 0, c3]
+    ])
+    
+    # Combined rotation up to j3
+    R123 = R1 @ R2 @ R3
+    
+    # Direction of the arm at j4 (before j4 rotation)
+    arm_dir_at_j4 = R123[:, 0]
+    
+    # Step 5: Calculate j4 to align with the target direction
+    # Calculate the angle between current arm direction and target direction
+    dot_product = np.clip(np.dot(arm_dir_at_j4, target_direction), -1.0, 1.0)
+    angle = math.acos(dot_product)
+    
+    # Determine the sign of the angle
+    cross_product = np.cross(arm_dir_at_j4, target_direction)
+    if np.dot(cross_product, R123[:, 1]) < 0:  # Check against y-axis of arm
+        angle = -angle
+    
+    # Since j4 rotates around -y in the model, negate the angle
+    j4 = -angle
+    
+    # Step 6: Calculate j5 to handle any remaining rotation
+    # After j4, the arm's x-axis should be aligned with target direction
+    c4, s4 = math.cos(j4), math.sin(j4)
+    R4 = np.array([
+        [c4, 0, s4],
+        [0, 1, 0],
+        [-s4, 0, c4]
+    ])
+    
+    # Combined rotation up to j4
+    R1234 = R123 @ R4
+    
+    # The arm's z-axis after j4
+    arm_z_after_j4 = R1234[:, 2]
+    
+    # The target's z-axis
+    target_z = target_rot[:, 2]
+    
+    # Calculate the angle between the arm's z-axis and target's z-axis
+    # Project to the plane perpendicular to the arm's x-axis (which is aligned with target direction)
+    
+    # Remove components along the arm's x-axis
+    arm_z_projected = arm_z_after_j4 - np.dot(arm_z_after_j4, R1234[:, 0]) * R1234[:, 0]
+    target_z_projected = target_z - np.dot(target_z, R1234[:, 0]) * R1234[:, 0]
+    
+    # Normalize
+    if np.linalg.norm(arm_z_projected) > 1e-6 and np.linalg.norm(target_z_projected) > 1e-6:
+        arm_z_projected = arm_z_projected / np.linalg.norm(arm_z_projected)
+        target_z_projected = target_z_projected / np.linalg.norm(target_z_projected)
+        
+        # Calculate the angle
+        dot = np.clip(np.dot(arm_z_projected, target_z_projected), -1.0, 1.0)
+        j5 = math.acos(dot)
+        
+        # Determine the sign
+        cross = np.cross(arm_z_projected, target_z_projected)
+        if np.dot(cross, R1234[:, 0]) < 0:
+            j5 = -j5
+    else:
+        j5 = 0
     
     # Optional: Add debug output
-    print(f"Target position (j5): ({x}, {y}, {z})")
-    print(f"Target in rotated frame: ({x_r}, 0, {z_r})")
-    print(f"Distance from j2 to target: {d}")
-    print(f"Calculated joint angles: j1={math.degrees(j1):.2f}°, j2={math.degrees(j2):.2f}°, j3={math.degrees(j3):.2f}°, j4={math.degrees(j4):.2f}°")
+    print(f"Target position (endpoint): ({x}, {y}, {z})")
+    print(f"Calculated j5 position: ({j5_pos_x*c1}, {j5_pos_x*s1}, {j5_pos_z})")
+    print(f"Calculated j4 position: ({j4_pos_x*c1}, {j4_pos_x*s1}, {j4_pos_z})")
+    print(f"Distance from j2 to j4: {r_j4}")
+    print(f"Calculated joint angles: j1={math.degrees(j1):.2f}°, j2={math.degrees(j2):.2f}°, j3={math.degrees(j3):.2f}°, j4={math.degrees(j4):.2f}°, j5={math.degrees(j5):.2f}°")
     
-    # Forward kinematics check to verify j5 position
-    # Position of j3
+    # Forward kinematics check
     p3x = link1_length * math.cos(j2)
     p3z = link1_length * math.sin(j2)
     
-    # Position of j4
     p4x = p3x + link2_length * math.cos(j2 + j3)
     p4z = p3z + link2_length * math.sin(j2 + j3)
     
-    # Position of j5
-    p5x = p4x + link3_length * math.cos(j2 + j3 + j4)
-    p5z = p4z + link3_length * math.sin(j2 + j3 + j4)
+    # Local x-axis direction after j4
+    c4, s4 = math.cos(j4), math.sin(j4)
+    local_x_dir_x = math.cos(j2 + j3 + j4)
+    local_x_dir_z = math.sin(j2 + j3 + j4)
+    
+    # Calculate j5 position
+    p5x = p4x + link3_length * local_x_dir_x
+    p5z = p4z + link3_length * local_x_dir_z
+    
+    # Local x-axis direction after j5
+    c5, s5 = math.cos(j5), math.sin(j5)
+    R5 = np.array([
+        [1, 0, 0],
+        [0, c5, -s5],
+        [0, s5, c5]
+    ])
+    R12345 = R1234 @ R5
+    local_dir_after_j5 = R12345[:, 0]
+    
+    # Calculate endpoint position
+    endpoint_x = p5x + link4_length * local_dir_after_j5[0]
+    endpoint_z = p5z + link4_length * local_dir_after_j5[2]
     
     # Rotate back to world coordinates
-    p5_global_x = c1 * p5x - s1 * 0
-    p5_global_y = s1 * p5x + c1 * 0
-    p5_global_z = p5z
+    endpoint_global_x = c1 * endpoint_x - s1 * 0
+    endpoint_global_y = s1 * endpoint_x + c1 * 0
+    endpoint_global_z = endpoint_z
     
-    print(f"Forward kinematics check - j5 position: ({p5_global_x:.3f}, {p5_global_y:.3f}, {p5_global_z:.3f})")
-    print(f"Error: {math.sqrt((p5_global_x-x)**2 + (p5_global_y-y)**2 + (p5_global_z-z)**2):.6f}")
-    
-    # Try another approach: solve for j2, j3, j4 separately
-    # Let's find position of j4 first
-    
-    # We know the target is link3_length away from j4
-    # Direction from j2 to target
-    dir_to_target = np.array([x_r, z_r])
-    dir_to_target_norm = dir_to_target / np.linalg.norm(dir_to_target)
-    
-    # j4 position (move back from target by link3_length)
-    j4_pos_x = x_r - link3_length * dir_to_target_norm[0]
-    j4_pos_z = z_r - link3_length * dir_to_target_norm[1]
-    
-    # Distance from j2 to j4
-    r_j4 = math.sqrt(j4_pos_x**2 + j4_pos_z**2)
-    
-    # If j4 is not reachable with link1 and link2
-    if r_j4 > link1_length + link2_length:
-        scale = (link1_length + link2_length) / r_j4
-        j4_pos_x *= scale
-        j4_pos_z *= scale
-        r_j4 = link1_length + link2_length
-        print(f"Warning: j4 position not reachable, scaled")
-    
-    # Now solve for j2 and j3 to position j4
-    cos_j3_new = (r_j4**2 - link1_length**2 - link2_length**2) / (2 * link1_length * link2_length)
-    cos_j3_new = max(min(cos_j3_new, 1.0), -1.0)
-    j3_new = -math.acos(cos_j3_new)
-    
-    beta_new = math.atan2(j4_pos_z, j4_pos_x)
-    cos_gamma_new = (link1_length**2 + r_j4**2 - link2_length**2) / (2 * link1_length * r_j4)
-    cos_gamma_new = max(min(cos_gamma_new, 1.0), -1.0)
-    gamma_new = math.acos(cos_gamma_new)
-    j2_new = beta_new + gamma_new
-    
-    # Calculate j4 to point from j4 to target
-    # Direction of the arm at j4
-    arm_dir_x = math.cos(j2_new + j3_new)
-    arm_dir_z = math.sin(j2_new + j3_new)
-    
-    # Direction from j4 to target
-    target_dir_x = x_r - j4_pos_x
-    target_dir_z = z_r - j4_pos_z
-    
-    # Normalize
-    target_dir_length = math.sqrt(target_dir_x**2 + target_dir_z**2)
-    if target_dir_length > 1e-6:
-        target_dir_x /= target_dir_length
-        target_dir_z /= target_dir_length
-    
-    # Angle between arm direction and target direction
-    cos_angle = arm_dir_x * target_dir_x + arm_dir_z * target_dir_z
-    cos_angle = max(min(cos_angle, 1.0), -1.0)
-    angle = math.acos(cos_angle)
-    
-    # Determine the sign of the angle
-    cross_product = arm_dir_x * target_dir_z - arm_dir_z * target_dir_x
-    if cross_product < 0:
-        angle = -angle
-    
-    j4_new = angle
-    
-    # Since j4 rotates around -y, negate the angle
-    j4_new = -j4_new
-    
-    print(f"Alternative solution - j1={math.degrees(j1):.2f}°, j2={math.degrees(j2_new):.2f}°, j3={math.degrees(j3_new):.2f}°, j4={math.degrees(j4_new):.2f}°")
-    
-    # Forward kinematics check for alternative solution
-    p3x_new = link1_length * math.cos(j2_new)
-    p3z_new = link1_length * math.sin(j2_new)
-    
-    p4x_new = p3x_new + link2_length * math.cos(j2_new + j3_new)
-    p4z_new = p3z_new + link2_length * math.sin(j2_new + j3_new)
-    
-    p5x_new = p4x_new + link3_length * math.cos(j2_new + j3_new + j4_new)
-    p5z_new = p4z_new + link3_length * math.sin(j2_new + j3_new + j4_new)
-    
-    p5_global_x_new = c1 * p5x_new - s1 * 0
-    p5_global_y_new = s1 * p5x_new + c1 * 0
-    p5_global_z_new = p5z_new
-    
-    error_new = math.sqrt((p5_global_x_new-x)**2 + (p5_global_y_new-y)**2 + (p5_global_z_new-z)**2)
-    print(f"Alternative solution - j5 position: ({p5_global_x_new:.3f}, {p5_global_y_new:.3f}, {p5_global_z_new:.3f})")
-    print(f"Alternative solution - Error: {error_new:.6f}")
-    
-    # Use the approach with the smaller error
-    if error_new < math.sqrt((p5_global_x-x)**2 + (p5_global_y-y)**2 + (p5_global_z-z)**2):
-        j2, j3, j4 = j2_new, j3_new, j4_new
-        print("Using alternative solution as it has smaller error")
+    error = math.sqrt((endpoint_global_x-x)**2 + (endpoint_global_y-y)**2 + (endpoint_global_z-z)**2)
+    print(f"Forward kinematics check - endpoint position: ({endpoint_global_x:.3f}, {endpoint_global_y:.3f}, {endpoint_global_z:.3f})")
+    print(f"Error: {error:.6f}")
     
     # Normalize angles to be within -pi to pi
     j1 = ((j1 + math.pi) % (2 * math.pi)) - math.pi
     j2 = ((j2 + math.pi) % (2 * math.pi)) - math.pi
     j3 = ((j3 + math.pi) % (2 * math.pi)) - math.pi
     j4 = ((j4 + math.pi) % (2 * math.pi)) - math.pi
+    j5 = ((j5 + math.pi) % (2 * math.pi)) - math.pi
     
-    return j1, j2, j3, j4
+    return j1, j2, j3, j4, j5
 
 def coords_to_angles(x, y, z, qw, qx, qy, qz):
     """
-    Full inverse kinematics function for testing.
-    For now, this calls the 4-DOF version and returns zeros for j5, j6
+    Full inverse kinematics function that positions the endpoint at the target location
+    and orients it according to the quaternion.
     
     Args:
         x, y, z: Target position coordinates
@@ -338,8 +360,64 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz):
     Returns:
         j1, j2, j3, j4, j5, j6: Joint angles in radians
     """
-    j1, j2, j3, j4 = coords_to_angles_4dof(x, y, z, qw, qx, qy, qz)
-    j5 = j6 = 0  # We'll implement these later
+    j1, j2, j3, j4, j5 = coords_to_angles_5dof(x, y, z, qw, qx, qy, qz)
+    
+    # Calculate j6 to account for the final roll orientation
+    # Convert quaternion to rotation matrix
+    target_rot = np.array([
+        [1 - 2*(qy*qy + qz*qz), 2*(qx*qy - qw*qz), 2*(qx*qz + qw*qy)],
+        [2*(qx*qy + qw*qz), 1 - 2*(qx*qx + qz*qz), 2*(qy*qz - qw*qx)],
+        [2*(qx*qz - qw*qy), 2*(qy*qz + qw*qx), 1 - 2*(qx*qx + qy*qy)]
+    ])
+    
+    # Calculate the orientation of the arm after j5
+    c1, s1 = math.cos(j1), math.sin(j1)
+    R1 = np.array([
+        [c1, -s1, 0],
+        [s1, c1, 0],
+        [0, 0, 1]
+    ])
+    
+    c2, s2 = math.cos(j2), math.sin(j2)
+    R2 = np.array([
+        [c2, 0, s2],
+        [0, 1, 0],
+        [-s2, 0, c2]
+    ])
+    
+    c3, s3 = math.cos(j3), math.sin(j3)
+    R3 = np.array([
+        [c3, 0, s3],
+        [0, 1, 0],
+        [-s3, 0, c3]
+    ])
+    
+    c4, s4 = math.cos(j4), math.sin(j4)
+    R4 = np.array([
+        [c4, 0, s4],
+        [0, 1, 0],
+        [-s4, 0, c4]
+    ])
+    
+    c5, s5 = math.cos(j5), math.sin(j5)
+    R5 = np.array([
+        [1, 0, 0],
+        [0, c5, -s5],
+        [0, s5, c5]
+    ])
+    
+    # Combined rotation after j5
+    R12345 = R1 @ R2 @ R3 @ R4 @ R5
+    
+    # We need to find the rotation around the x-axis (j6) to align with the target orientation
+    # The residual rotation needed is:
+    R_residual = R12345.T @ target_rot
+    
+    # For a rotation around x-axis, we extract the roll angle
+    j6 = math.atan2(R_residual[2, 1], R_residual[1, 1])
+    
+    # Normalize j6 to be within -pi to pi
+    j6 = ((j6 + math.pi) % (2 * math.pi)) - math.pi
     
     return j1, j2, j3, j4, j5, j6
 
