@@ -140,8 +140,8 @@ class InteractiveScene:
 
 def coords_to_angles(x, y, z, qw, qx, qy, qz):
     """
-    Calculate joint angles for the robot arm to reach a target position and orientation
-    using a custom inverse kinematics solution without external libraries.
+    Calculate joint angles for the robot arm to reach a target position and orientation.
+    Optimized for the specific MuJoCo model based on the XML.
     
     Args:
         x, y, z: Target position coordinates
@@ -152,140 +152,191 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz):
     """
     print(f"Calculating IK for position ({x}, {y}, {z}) with orientation quaternion ({qw}, {qx}, {qy}, {qz})")
     
-    # Robot dimensions from MuJoCo model (based on the XML)
-    l1 = 1.0    # Length of first arm segment (from j2 to j3)
-    l2 = 1.0    # Length of second arm segment (from j3 to j4)
-    l3 = 0.2    # Length of third arm segment (from j4 to j5)
-    l4 = 0.17   # Length of fourth arm segment (from j5 to j6)
-    l5 = 0.2    # Length of end effector (from j6 to end)
+    # Use numerical optimization to find joint angles
+    # This is more robust than analytical solutions for complex robots
     
-    # Convert quaternion to rotation matrix
-    rot = R.from_quat([qx, qy, qz, qw])
-    rot_matrix = rot.as_matrix()
+    # Function to calculate forward kinematics
+    def forward_kinematics(joint_angles):
+        j1, j2, j3, j4, j5, j6 = joint_angles
+        
+        # Rotation matrices for each joint
+        # j1 rotates around Z
+        R1 = np.array([
+            [np.cos(j1), -np.sin(j1), 0],
+            [np.sin(j1), np.cos(j1), 0],
+            [0, 0, 1]
+        ])
+        
+        # j2 rotates around -Y
+        R2 = np.array([
+            [np.cos(j2), 0, np.sin(j2)],
+            [0, 1, 0],
+            [-np.sin(j2), 0, np.cos(j2)]
+        ])
+        
+        # j3 rotates around -Y
+        R3 = np.array([
+            [np.cos(j3), 0, np.sin(j3)],
+            [0, 1, 0],
+            [-np.sin(j3), 0, np.cos(j3)]
+        ])
+        
+        # j4 rotates around -Y
+        R4 = np.array([
+            [np.cos(j4), 0, np.sin(j4)],
+            [0, 1, 0],
+            [-np.sin(j4), 0, np.cos(j4)]
+        ])
+        
+        # j5 rotates around Z
+        R5 = np.array([
+            [np.cos(j5), -np.sin(j5), 0],
+            [np.sin(j5), np.cos(j5), 0],
+            [0, 0, 1]
+        ])
+        
+        # j6 rotates around X
+        R6 = np.array([
+            [1, 0, 0],
+            [0, np.cos(j6), -np.sin(j6)],
+            [0, np.sin(j6), np.cos(j6)]
+        ])
+        
+        # Translation vectors for each joint
+        # Base to j1 (no translation)
+        T1 = np.array([0, 0, 0])
+        
+        # j1 to j2 (no translation)
+        T2 = np.array([0, 0, 0])
+        
+        # j2 to j3 (1 unit in x direction)
+        T3 = np.array([1, 0, 0])
+        
+        # j3 to j4 (1 unit in x direction)
+        T4 = np.array([1, 0, 0])
+        
+        # j4 to j5 (0.2 unit in x direction)
+        T5 = np.array([0.2, 0, 0])
+        
+        # j5 to j6 (0.17 unit in x direction)
+        T6 = np.array([0.17, 0, 0])
+        
+        # j6 to end effector (0.2 unit in x direction)
+        Te = np.array([0.2, 0, 0])
+        
+        # Compute the position and orientation of the end effector
+        # Start with identity rotation and zero position
+        R = np.eye(3)
+        p = np.zeros(3)
+        
+        # Apply each transformation sequentially
+        R = R @ R1
+        p = p + T1
+        
+        p = p + R @ T2
+        R = R @ R2
+        
+        p = p + R @ T3
+        R = R @ R3
+        
+        p = p + R @ T4
+        R = R @ R4
+        
+        p = p + R @ T5
+        R = R @ R5
+        
+        p = p + R @ T6
+        R = R @ R6
+        
+        p = p + R @ Te
+        
+        return p, R
     
-    # Extract the orientation axes
-    x_axis = rot_matrix[:, 0]  # Forward direction of end effector
-    y_axis = rot_matrix[:, 1]  # Left direction of end effector
-    z_axis = rot_matrix[:, 2]  # Up direction of end effector
+    # Objective function for optimization
+    def objective(joint_angles):
+        # Calculate forward kinematics
+        p, R = forward_kinematics(joint_angles)
+        
+        # Calculate position error
+        target_pos = np.array([x, y, z])
+        pos_error = np.linalg.norm(p - target_pos)
+        
+        # Calculate orientation error
+        target_R = R.from_quat([qx, qy, qz, qw]).as_matrix()
+        # Frobenius norm of the difference between rotation matrices
+        ori_error = np.linalg.norm(R - target_R, 'fro')
+        
+        # Weighted sum of errors (position is more important than orientation)
+        return pos_error + 0.1 * ori_error
     
-    # Wrist position: move back from target along x-axis
-    wrist_pos = np.array([x, y, z]) - l5 * x_axis
+    # Initial guess for optimization
+    # We'll try multiple starting points to avoid local minima
+    best_solution = None
+    best_error = float('inf')
     
-    # Step 1: Calculate j1 (base rotation)
-    j1 = math.atan2(wrist_pos[1], wrist_pos[0])
+    # Starting configurations to try
+    starting_configs = [
+        [0, 0, 0, 0, 0, 0],              # Zero position
+        [0, np.pi/4, -np.pi/4, 0, 0, 0], # Slightly bent arm
+        [np.pi/2, 0, 0, 0, 0, 0],        # Rotated base
+        [0, -np.pi/4, np.pi/4, 0, 0, 0]  # Alternative bend
+    ]
     
-    # Distance from base to wrist in XY plane
-    r_xy = math.sqrt(wrist_pos[0]**2 + wrist_pos[1]**2)
+    for initial_guess in starting_configs:
+        # Use coordinate descent method for optimization
+        current_guess = np.array(initial_guess)
+        current_error = objective(current_guess)
+        
+        # Max iterations and step size
+        max_iter = 200
+        step_size = 0.1
+        min_step = 0.01
+        
+        for _ in range(max_iter):
+            improved = False
+            
+            # Try adjusting each joint angle
+            for i in range(6):
+                # Try increasing the angle
+                current_guess[i] += step_size
+                new_error = objective(current_guess)
+                
+                if new_error < current_error:
+                    current_error = new_error
+                    improved = True
+                else:
+                    # If not improved, try decreasing
+                    current_guess[i] -= 2 * step_size
+                    new_error = objective(current_guess)
+                    
+                    if new_error < current_error:
+                        current_error = new_error
+                        improved = True
+                    else:
+                        # If still not improved, revert
+                        current_guess[i] += step_size
+            
+            # If no improvement, reduce step size
+            if not improved:
+                step_size *= 0.5
+                
+                # If step size is too small, stop
+                if step_size < min_step:
+                    break
+        
+        # Check if this solution is better than previous ones
+        if current_error < best_error:
+            best_error = current_error
+            best_solution = current_guess
     
-    # Height of wrist above base
-    h = wrist_pos[2]
+    # Normalize angles to [-π, π]
+    for i in range(6):
+        best_solution[i] = ((best_solution[i] + np.pi) % (2 * np.pi)) - np.pi
     
-    # We need to solve for j2 and j3
-    # The arm's kinematic structure from the XML: 
-    # - j2 rotates around -Y at the base
-    # - j3 rotates around -Y at the end of the first segment
-    
-    # Simplified 2D problem: reach [r_xy, h] with two segments
-    # Length of segments in the 2D problem
-    seg1 = l1
-    seg2 = l2 + l3 + l4  # Combined length of remaining segments
-    
-    # Distance from base to wrist
-    d = math.sqrt(r_xy**2 + h**2)
-    
-    # Angle from horizontal to wrist
-    phi = math.atan2(h, r_xy)
-    
-    # Check if target is reachable
-    if d > (seg1 + seg2):
-        print(f"Warning: Target position is out of reach. Distance: {d:.3f}, Max reach: {seg1 + seg2:.3f}")
-        # Scale the position to be reachable
-        wrist_pos = wrist_pos * (0.95 * (seg1 + seg2) / d)
-        r_xy = math.sqrt(wrist_pos[0]**2 + wrist_pos[1]**2)
-        h = wrist_pos[2]
-        d = math.sqrt(r_xy**2 + h**2)
-        phi = math.atan2(h, r_xy)
-    
-    # Calculate j3 using law of cosines
-    cos_j3 = (d**2 - seg1**2 - seg2**2) / (2 * seg1 * seg2)
-    
-    # Ensure cos_j3 is in valid range [-1, 1]
-    cos_j3 = max(-1.0, min(1.0, cos_j3))
-    
-    # Elbow angle (negative due to rotation around -Y)
-    j3 = -math.acos(cos_j3)
-    
-    # Calculate j2 using geometry
-    # Angle from segment 1 to the line from base to wrist
-    beta = math.acos((seg1**2 + d**2 - seg2**2) / (2 * seg1 * d))
-    
-    # Shoulder angle
-    j2 = phi - beta
-    
-    # Now for the wrist angles (j4, j5, j6)
-    # We need to determine orientation of the end effector
-    
-    # Calculate the rotation matrix from base to the end of j3 (before wrist)
-    c1, s1 = math.cos(j1), math.sin(j1)
-    c2, s2 = math.cos(j2), math.sin(j2)
-    c3, s3 = math.cos(j3), math.sin(j3)
-    
-    # Rotation matrices for each joint
-    R1 = np.array([
-        [c1, -s1, 0],
-        [s1, c1, 0],
-        [0, 0, 1]
-    ])
-    
-    R2 = np.array([
-        [c2, 0, s2],
-        [0, 1, 0],
-        [-s2, 0, c2]
-    ])
-    
-    R3 = np.array([
-        [c3, 0, s3],
-        [0, 1, 0],
-        [-s3, 0, c3]
-    ])
-    
-    # Combined rotation matrix up to j3
-    R_0_3 = R1 @ R2 @ R3
-    
-    # Desired rotation from j3 to end effector
-    R_3_6 = R_0_3.T @ rot_matrix
-    
-    # Extract Euler angles ZYX from this rotation matrix
-    # This gives us j4, j5, j6
-    try:
-        # Check for singularity
-        if abs(R_3_6[0, 2]) >= 0.99999:
-            # Gimbal lock case
-            j5 = math.pi/2 if R_3_6[0, 2] > 0 else -math.pi/2
-            j4 = 0  # Can be arbitrary
-            j6 = math.atan2(R_3_6[1, 0], R_3_6[1, 1])
-        else:
-            j5 = math.asin(-R_3_6[0, 2])
-            j4 = math.atan2(R_3_6[1, 2], R_3_6[2, 2])
-            j6 = math.atan2(R_3_6[0, 1], R_3_6[0, 0])
-    except Exception as e:
-        print(f"Error calculating wrist angles: {e}")
-        # Fallback to simple values
-        j4 = j5 = j6 = 0
-    
-    # In our robot model, j4 and j5 rotate around -Y, so we need to negate them
-    j4 = -j4
-    j5 = -j5
-    
-    # Normalize all angles to the range [-π, π]
-    j1 = ((j1 + math.pi) % (2 * math.pi)) - math.pi
-    j2 = ((j2 + math.pi) % (2 * math.pi)) - math.pi
-    j3 = ((j3 + math.pi) % (2 * math.pi)) - math.pi
-    j4 = ((j4 + math.pi) % (2 * math.pi)) - math.pi
-    j5 = ((j5 + math.pi) % (2 * math.pi)) - math.pi
-    j6 = ((j6 + math.pi) % (2 * math.pi)) - math.pi
+    j1, j2, j3, j4, j5, j6 = best_solution
     
     print(f"Computed joint angles: j1={j1:.4f}, j2={j2:.4f}, j3={j3:.4f}, j4={j4:.4f}, j5={j5:.4f}, j6={j6:.4f}")
+    print(f"Final error: {best_error:.6f}")
     
     return j1, j2, j3, j4, j5, j6
 
