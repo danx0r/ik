@@ -142,10 +142,11 @@ class InteractiveScene:
 
 def coords_to_angles_4dof(x, y, z, qw, qx, qy, qz):
     """
-    4-DOF inverse kinematics that positions j5 at the target and starts orienting the end effector.
+    4-DOF inverse kinematics that positions j5 (the joint between target and the segment to j6) 
+    at the target position.
     
     Args:
-        x, y, z: Target position coordinates
+        x, y, z: Target position coordinates (where j5 should be)
         qw, qx, qy, qz: Target orientation as quaternion
         
     Returns:
@@ -153,8 +154,8 @@ def coords_to_angles_4dof(x, y, z, qw, qx, qy, qz):
     """
     # Link lengths from the XML file
     link1_length = 1.0  # First arm segment (j2 to j3)
-    link2_length = 1.0  # Second arm segment (j3 to j4/"target" in XML)
-    link3_length = 0.2  # Third arm segment (j4 to j5 - the new target)
+    link2_length = 1.0  # Second arm segment (j3 to j4)
+    link3_length = 0.2  # Third arm segment (j4 to j5/target)
     
     # Convert quaternion to rotation matrix for orientation constraints
     target_rot = np.array([
@@ -179,49 +180,73 @@ def coords_to_angles_4dof(x, y, z, qw, qx, qy, qz):
         [0, 0, 1]
     ])
     
+    # Target position in frame after j1 rotation
     x_r = c1 * x + s1 * y  # x in rotated frame
+    y_r = -s1 * x + c1 * y  # y in rotated frame (should be close to 0)
     z_r = z  # z remains the same
     
-    # Rotate target direction to the frame after j1
-    target_dir_j1 = R1.T @ target_direction
+    # The target position is j5, which is directly connected to j4 by link3
+    # We need to solve for j2, j3, j4 to position j5 at the target
     
-    # We need to ensure this is normalized
-    target_dir_j1_norm = target_dir_j1 / np.linalg.norm(target_dir_j1)
+    # We'll solve this as a positioning problem for a 3-link manipulator
+    # First, calculate the distance from j2 to j5 (target)
+    r = math.sqrt(x_r**2 + z_r**2)
     
-    # Calculate j4 position - move backward from target position
-    j4_x_r = x_r - link3_length * target_dir_j1_norm[0]
-    j4_z_r = z_r - link3_length * target_dir_j1_norm[2]
+    # Check if the target is reachable
+    max_reach = link1_length + link2_length + link3_length
+    if r > max_reach:
+        # If not reachable, scale to maximum reach
+        scale = max_reach / r
+        x_r *= scale
+        z_r *= scale
+        r = max_reach
+        print(f"Warning: Target out of reach, scaled to maximum distance")
+    
+    # The problem is now to position j4 such that j5 is at the target
+    # and we have the correct orientation
+    
+    # First, we'll solve the positioning problem using a simplified approach
+    # We'll determine j2 and j3 to position j4 at a calculated location
+    
+    # Calculate the direction from j2 to target
+    dir_to_target = np.array([x_r, 0, z_r])
+    dir_to_target = dir_to_target / np.linalg.norm(dir_to_target)
+    
+    # For now, let's assume j4 is positioned along the direction to target
+    # at a distance of link3_length from the target
+    j4_pos_x = x_r - link3_length * dir_to_target[0]
+    j4_pos_z = z_r - link3_length * dir_to_target[2]
     
     # Calculate the distance from j2 to j4
-    r_j4 = math.sqrt(j4_x_r**2 + j4_z_r**2)
+    r_j4 = math.sqrt(j4_pos_x**2 + j4_pos_z**2)
     
-    # Check if j4 position is reachable
+    # Check if j4 position is reachable with link1 and link2
     max_reach_j4 = link1_length + link2_length
     if r_j4 > max_reach_j4:
-        # If not reachable, scale the j4 position to maximum reach
+        # If not reachable, scale j4 position
         scale = max_reach_j4 / r_j4
-        j4_x_r *= scale
-        j4_z_r *= scale
+        j4_pos_x *= scale
+        j4_pos_z *= scale
         r_j4 = max_reach_j4
-        print(f"Warning: j4 position out of reach, scaled to maximum distance")
+        print(f"Warning: Calculated j4 position out of reach, adjusted")
     
-    # Step 4: Solve for j2 and j3 to position j4
+    # Step 3: Solve for j2 and j3 to position j4
     # Calculate j3 (elbow joint)
     cos_j3 = (r_j4**2 - link1_length**2 - link2_length**2) / (2 * link1_length * link2_length)
-    cos_j3 = max(min(cos_j3, 1.0), -1.0)
+    cos_j3 = max(min(cos_j3, 1.0), -1.0)  # Clamp to valid range
     j3 = -math.acos(cos_j3)  # Negative due to joint direction in model
     
     # Calculate j2 (shoulder joint)
-    beta = math.atan2(j4_z_r, j4_x_r)
+    beta = math.atan2(j4_pos_z, j4_pos_x)
     cos_gamma = (link1_length**2 + r_j4**2 - link2_length**2) / (2 * link1_length * r_j4)
-    cos_gamma = max(min(cos_gamma, 1.0), -1.0)
+    cos_gamma = max(min(cos_gamma, 1.0), -1.0)  # Clamp to valid range
     gamma = math.acos(cos_gamma)
     j2 = beta + gamma
     
-    # Step 5: Calculate j4 to position j5 at the target
-    # We need to determine the orientation of the arm after j3
+    # Step 4: Calculate j4 to orient the arm toward the target
+    # We need to find the angle that aligns the x-axis after j4 with the direction to target
     
-    # Rotation matrices for j2 and j3
+    # Calculate orientation after j3
     c2, s2 = math.cos(j2), math.sin(j2)
     R2 = np.array([
         [c2, 0, s2],
@@ -242,72 +267,48 @@ def coords_to_angles_4dof(x, y, z, qw, qx, qy, qz):
     # Direction of the arm after j3 (x-axis)
     arm_dir_after_j3 = R123[:, 0]
     
-    # Calculate j4 to align the arm with the target direction
-    # We want to find the angle between arm_dir_after_j3 and target_direction
+    # Direction from j4 to target
+    dir_j4_to_target = np.array([x_r - j4_pos_x, 0, z_r - j4_pos_z])
+    if np.linalg.norm(dir_j4_to_target) > 1e-6:
+        dir_j4_to_target = dir_j4_to_target / np.linalg.norm(dir_j4_to_target)
     
-    # Project both vectors to the xz-plane in world coordinates
-    arm_xz = np.array([arm_dir_after_j3[0], 0, arm_dir_after_j3[2]])
-    target_xz = np.array([target_direction[0], 0, target_direction[2]])
+    # Rotate direction to arm's local frame after j3
+    dir_j4_to_target_local = R123.T @ dir_j4_to_target
     
-    # Normalize if not zero
-    if np.linalg.norm(arm_xz) > 1e-6 and np.linalg.norm(target_xz) > 1e-6:
-        arm_xz = arm_xz / np.linalg.norm(arm_xz)
-        target_xz = target_xz / np.linalg.norm(target_xz)
-        
-        # Calculate the angle between the arm and target in the xz-plane
-        dot_product = np.clip(np.dot(arm_xz, target_xz), -1.0, 1.0)
-        angle = math.acos(dot_product)
-        
-        # Determine the sign of the angle
-        cross_product = np.cross(arm_xz, target_xz)
-        if cross_product[1] < 0:  # If y-component of cross product is negative
-            angle = -angle
-        
-        j4 = angle
-    else:
-        j4 = 0
+    # Calculate j4 as the angle needed to align with the target
+    j4 = math.atan2(dir_j4_to_target_local[2], dir_j4_to_target_local[0])
     
-    # Since j4 rotates around -y in the model, we need to negate the angle
+    # Since j4 rotates around -y in the model, we need to negate
     j4 = -j4
     
     # Optional: Add debug output
-    print(f"Target for j5: ({x}, {y}, {z})")
-    print(f"Calculated j4 position: ({j4_x_r*c1}, {j4_x_r*s1}, {j4_z_r})")
+    print(f"Target position (j5): ({x}, {y}, {z})")
+    print(f"Calculated j4 position: ({j4_pos_x*c1}, {j4_pos_x*s1}, {j4_pos_z})")
     print(f"Distance from j2 to j4: {r_j4}")
-    print(f"Target direction (world): {target_direction}")
-    print(f"Arm direction after j3 (world): {arm_dir_after_j3}")
+    print(f"Direction to target: {dir_to_target}")
     print(f"Calculated joint angles: j1={math.degrees(j1):.2f}°, j2={math.degrees(j2):.2f}°, j3={math.degrees(j3):.2f}°, j4={math.degrees(j4):.2f}°")
     
     # Forward kinematics check to verify j5 position
-    # Calculate j4 position
-    p2x = link1_length * math.cos(j2)
-    p2z = link1_length * math.sin(j2)
+    # Position of j3
+    p3x = link1_length * math.cos(j2)
+    p3z = link1_length * math.sin(j2)
     
-    p3x = p2x + link2_length * math.cos(j2 + j3)
-    p3z = p2z + link2_length * math.sin(j2 + j3)
+    # Position of j4
+    p4x = p3x + link2_length * math.cos(j2 + j3)
+    p4z = p3z + link2_length * math.sin(j2 + j3)
     
     # Calculate j5 position
     c4, s4 = math.cos(j4), math.sin(j4)
-    R4 = np.array([
-        [c4, 0, s4],
-        [0, 1, 0],
-        [-s4, 0, c4]
-    ])
-    
-    # Local x-axis direction after j4
-    arm_dir_after_j4 = (R123 @ R4)[:, 0]
-    
-    # Calculate j5 position
-    p4_local_x = p3x + link3_length * arm_dir_after_j4[0]
-    p4_local_z = p3z + link3_length * arm_dir_after_j4[2]
+    p5x = p4x + link3_length * math.cos(j2 + j3 + j4)
+    p5z = p4z + link3_length * math.sin(j2 + j3 + j4)
     
     # Rotate back to world coordinates
-    p4_global_x = c1 * p4_local_x - s1 * 0  # y component is 0 in the xz-plane
-    p4_global_y = s1 * p4_local_x + c1 * 0
-    p4_global_z = p4_local_z
+    p5_global_x = c1 * p5x - s1 * 0  # y component is 0 in the xz-plane
+    p5_global_y = s1 * p5x + c1 * 0
+    p5_global_z = p5z
     
-    print(f"Forward kinematics check - j5 position: ({p4_global_x:.3f}, {p4_global_y:.3f}, {p4_global_z:.3f})")
-    print(f"Error: {math.sqrt((p4_global_x-x)**2 + (p4_global_y-y)**2 + (p4_global_z-z)**2):.6f}")
+    print(f"Forward kinematics check - j5 position: ({p5_global_x:.3f}, {p5_global_y:.3f}, {p5_global_z:.3f})")
+    print(f"Error: {math.sqrt((p5_global_x-x)**2 + (p5_global_y-y)**2 + (p5_global_z-z)**2):.6f}")
     
     # Normalize angles to be within -pi to pi
     j1 = ((j1 + math.pi) % (2 * math.pi)) - math.pi
