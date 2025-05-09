@@ -140,8 +140,8 @@ class InteractiveScene:
 
 def coords_to_angles(x, y, z, qw, qx, qy, qz):
     """
-    Calculate joint angles for the robot arm to reach a target position and orientation.
-    Optimized for the specific MuJoCo model based on the XML.
+    Calculate joint angles for the robot arm to reach a target position and orientation
+    using MuJoCo's built-in inverse kinematics functionality.
     
     Args:
         x, y, z: Target position coordinates
@@ -152,194 +152,162 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz):
     """
     print(f"Calculating IK for position ({x}, {y}, {z}) with orientation quaternion ({qw}, {qx}, {qy}, {qz})")
     
-    # Use numerical optimization to find joint angles
-    # This is more robust than analytical solutions for complex robots
+    # Create a temporary model and data instance to work with
+    model = mujoco.MjModel.from_xml_string(MODEL_XML)
+    data = mujoco.MjData(model)
     
-    # Convert quaternion to rotation matrix once
-    from scipy.spatial.transform import Rotation
-    target_rot = Rotation.from_quat([qx, qy, qz, qw])
-    target_rot_matrix = target_rot.as_matrix()
+    # Get the end effector body id ('endpt' in the model)
+    end_effector_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "endpt")
+    if end_effector_id < 0:
+        print("Warning: End effector 'endpt' not found in model, using target body instead")
+        end_effector_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "target")
     
-    # Function to calculate forward kinematics
-    def forward_kinematics(joint_angles):
-        j1, j2, j3, j4, j5, j6 = joint_angles
-        
-        # Rotation matrices for each joint
-        # j1 rotates around Z
-        R1 = np.array([
-            [np.cos(j1), -np.sin(j1), 0],
-            [np.sin(j1), np.cos(j1), 0],
-            [0, 0, 1]
-        ])
-        
-        # j2 rotates around -Y
-        R2 = np.array([
-            [np.cos(j2), 0, np.sin(j2)],
-            [0, 1, 0],
-            [-np.sin(j2), 0, np.cos(j2)]
-        ])
-        
-        # j3 rotates around -Y
-        R3 = np.array([
-            [np.cos(j3), 0, np.sin(j3)],
-            [0, 1, 0],
-            [-np.sin(j3), 0, np.cos(j3)]
-        ])
-        
-        # j4 rotates around -Y
-        R4 = np.array([
-            [np.cos(j4), 0, np.sin(j4)],
-            [0, 1, 0],
-            [-np.sin(j4), 0, np.cos(j4)]
-        ])
-        
-        # j5 rotates around Z
-        R5 = np.array([
-            [np.cos(j5), -np.sin(j5), 0],
-            [np.sin(j5), np.cos(j5), 0],
-            [0, 0, 1]
-        ])
-        
-        # j6 rotates around X
-        R6 = np.array([
-            [1, 0, 0],
-            [0, np.cos(j6), -np.sin(j6)],
-            [0, np.sin(j6), np.cos(j6)]
-        ])
-        
-        # Translation vectors for each joint
-        # Base to j1 (no translation)
-        T1 = np.array([0, 0, 0])
-        
-        # j1 to j2 (no translation)
-        T2 = np.array([0, 0, 0])
-        
-        # j2 to j3 (1 unit in x direction)
-        T3 = np.array([1, 0, 0])
-        
-        # j3 to j4 (1 unit in x direction)
-        T4 = np.array([1, 0, 0])
-        
-        # j4 to j5 (0.2 unit in x direction)
-        T5 = np.array([0.2, 0, 0])
-        
-        # j5 to j6 (0.17 unit in x direction)
-        T6 = np.array([0.17, 0, 0])
-        
-        # j6 to end effector (0.2 unit in x direction)
-        Te = np.array([0.2, 0, 0])
-        
-        # Compute the position and orientation of the end effector
-        # Start with identity rotation and zero position
-        R = np.eye(3)
-        p = np.zeros(3)
-        
-        # Apply each transformation sequentially
-        R = R @ R1
-        p = p + T1
-        
-        p = p + R @ T2
-        R = R @ R2
-        
-        p = p + R @ T3
-        R = R @ R3
-        
-        p = p + R @ T4
-        R = R @ R4
-        
-        p = p + R @ T5
-        R = R @ R5
-        
-        p = p + R @ T6
-        R = R @ R6
-        
-        p = p + R @ Te
-        
-        return p, R
+    # Get the joint indices for the 6 joints
+    joint_ids = []
+    for i in range(1, 7):
+        joint_name = f"j{i}"
+        joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint_name)
+        if joint_id < 0:
+            raise ValueError(f"Joint {joint_name} not found in model")
+        joint_ids.append(joint_id)
     
-    # Objective function for optimization
-    def objective(joint_angles):
-        # Calculate forward kinematics
-        p, R = forward_kinematics(joint_angles)
-        
-        # Calculate position error
-        target_pos = np.array([x, y, z])
-        pos_error = np.linalg.norm(p - target_pos)
-        
-        # Calculate orientation error
-        ori_error = np.linalg.norm(R - target_rot_matrix, 'fro')
-        
-        # Weighted sum of errors (position is more important than orientation)
-        return pos_error + 0.1 * ori_error
+    print(f"End effector ID: {end_effector_id}, Joint IDs: {joint_ids}")
     
-    # Initial guess for optimization
-    # We'll try multiple starting points to avoid local minima
-    best_solution = None
-    best_error = float('inf')
+    # Set up the target position and orientation
+    target_pos = np.array([x, y, z])
+    target_quat = np.array([qw, qx, qy, qz])
     
-    # Starting configurations to try
+    # Create arrays for the MuJoCo IK solver
+    jpos_start = np.zeros(model.nv)  # Starting joint positions
+    jpos = np.zeros(model.nv)  # Output joint positions
+    
+    # We'll try multiple starting configurations
     starting_configs = [
         [0, 0, 0, 0, 0, 0],              # Zero position
-        [0, np.pi/4, -np.pi/4, 0, 0, 0], # Slightly bent arm
+        [0, 0.5, -0.5, 0, 0, 0],         # Slightly bent arm
         [np.pi/2, 0, 0, 0, 0, 0],        # Rotated base
-        [0, -np.pi/4, np.pi/4, 0, 0, 0]  # Alternative bend
+        [0, -0.5, 0.5, 0, 0, 0],         # Alternative bend
+        [np.pi/4, 0.5, -0.3, 0, 0, 0],   # Mixed configuration
     ]
     
-    for initial_guess in starting_configs:
-        # Use coordinate descent method for optimization
-        current_guess = np.array(initial_guess)
-        current_error = objective(current_guess)
-        
-        # Max iterations and step size
-        max_iter = 200
-        step_size = 0.1
-        min_step = 0.01
-        
-        for _ in range(max_iter):
-            improved = False
-            
-            # Try adjusting each joint angle
-            for i in range(6):
-                # Try increasing the angle
-                current_guess[i] += step_size
-                new_error = objective(current_guess)
-                
-                if new_error < current_error:
-                    current_error = new_error
-                    improved = True
-                else:
-                    # If not improved, try decreasing
-                    current_guess[i] -= 2 * step_size
-                    new_error = objective(current_guess)
-                    
-                    if new_error < current_error:
-                        current_error = new_error
-                        improved = True
-                    else:
-                        # If still not improved, revert
-                        current_guess[i] += step_size
-            
-            # If no improvement, reduce step size
-            if not improved:
-                step_size *= 0.5
-                
-                # If step size is too small, stop
-                if step_size < min_step:
-                    break
-        
-        # Check if this solution is better than previous ones
-        if current_error < best_error:
-            best_error = current_error
-            best_solution = current_guess
+    best_error = float('inf')
+    best_solution = None
     
-    # Normalize angles to [-π, π]
-    for i in range(6):
+    for config in starting_configs:
+        # Set the initial joint positions
+        for i, joint_id in enumerate(joint_ids):
+            jpos_start[model.jnt_qposadr[joint_id]] = config[i]
+        
+        # Reset data
+        mujoco.mj_resetData(model, data)
+        data.qpos[:] = jpos_start
+        
+        # Forward kinematics to calculate initial state
+        mujoco.mj_forward(model, data)
+        
+        # Set up the IK parameters
+        ik_iter = 100  # Maximum number of iterations
+        ik_tol = 1e-6  # Tolerance for convergence
+        
+        try:
+            # MuJoCo's IK implementation works with the full position vector
+            jpos[:] = jpos_start
+            
+            # Get body id for the end effector
+            bodyid = end_effector_id
+            
+            # Create a copy of data to work with
+            temp_data = mujoco.MjData(model)
+            temp_data.qpos[:] = jpos_start
+            
+            # Forward kinematics to calculate initial state
+            mujoco.mj_forward(model, temp_data)
+            
+            # Use MuJoCo's IK to solve for joint positions
+            for _ in range(ik_iter):
+                # Save the current joint positions
+                old_jpos = jpos.copy()
+                
+                # Update data with current joint positions
+                temp_data.qpos[:] = jpos
+                mujoco.mj_forward(model, temp_data)
+                
+                # Get the current end effector position and orientation
+                curr_pos = temp_data.xpos[bodyid].copy()
+                curr_quat = temp_data.xquat[bodyid].copy()
+                
+                # Calculate position and orientation errors
+                pos_err = target_pos - curr_pos
+                
+                # Convert quaternions to rotation matrices for comparison
+                curr_rot = R.from_quat([curr_quat[1], curr_quat[2], curr_quat[3], curr_quat[0]])
+                target_rot = R.from_quat([target_quat[1], target_quat[2], target_quat[3], target_quat[0]])
+                
+                # Get the relative rotation between current and target
+                rel_rot = target_rot * curr_rot.inv()
+                axis_angle = rel_rot.as_rotvec()
+                
+                # Combine position and orientation errors
+                error = np.concatenate([pos_err, axis_angle])
+                
+                # Compute Jacobian for the end effector
+                jacp = np.zeros((3, model.nv))
+                jacr = np.zeros((3, model.nv))
+                mujoco.mj_jacBody(model, temp_data, jacp, jacr, bodyid)
+                
+                # Combine position and rotation Jacobians
+                jac = np.vstack([jacp, jacr])
+                
+                # Extract the columns corresponding to the actuated joints
+                jac_reduced = np.zeros((6, len(joint_ids)))
+                for i, joint_id in enumerate(joint_ids):
+                    dof_idx = model.jnt_dofadr[joint_id]
+                    jac_reduced[:, i] = jac[:, dof_idx]
+                
+                # Solve the IK problem using pseudoinverse
+                jac_pinv = np.linalg.pinv(jac_reduced)
+                delta = jac_pinv @ error
+                
+                # Update joint positions
+                for i, joint_id in enumerate(joint_ids):
+                    jpos[model.jnt_qposadr[joint_id]] += delta[i]
+                
+                # Check for convergence
+                if np.linalg.norm(delta) < ik_tol:
+                    break
+                
+                # Check for lack of progress
+                if np.linalg.norm(jpos - old_jpos) < ik_tol / 10:
+                    break
+            
+            # Calculate final error
+            temp_data.qpos[:] = jpos
+            mujoco.mj_forward(model, temp_data)
+            final_pos = temp_data.xpos[bodyid].copy()
+            pos_error = np.linalg.norm(target_pos - final_pos)
+            
+            print(f"Starting config {config}: Final position error: {pos_error:.6f}")
+            
+            if pos_error < best_error:
+                best_error = pos_error
+                best_solution = np.array([jpos[model.jnt_qposadr[joint_id]] for joint_id in joint_ids])
+                
+        except Exception as e:
+            print(f"Error during IK calculation with starting config {config}: {e}")
+            continue
+    
+    if best_solution is None:
+        print("Failed to find a valid IK solution. Returning zeros.")
+        return 0, 0, 0, 0, 0, 0
+    
+    # Normalize angles to the range [-π, π]
+    for i in range(len(best_solution)):
         best_solution[i] = ((best_solution[i] + np.pi) % (2 * np.pi)) - np.pi
     
     j1, j2, j3, j4, j5, j6 = best_solution
     
-    print(f"Computed joint angles: j1={j1:.4f}, j2={j2:.4f}, j3={j3:.4f}, j4={j4:.4f}, j5={j5:.4f}, j6={j6:.4f}")
-    print(f"Final error: {best_error:.6f}")
+    print(f"Best IK solution: j1={j1:.4f}, j2={j2:.4f}, j3={j3:.4f}, j4={j4:.4f}, j5={j5:.4f}, j6={j6:.4f}")
+    print(f"Final position error: {best_error:.6f}")
     
     return j1, j2, j3, j4, j5, j6
 
