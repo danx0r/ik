@@ -116,8 +116,8 @@ class InteractiveScene:
                 self.data.actuator('j4').ctrl[0] = j4
             if j5 is not None:
                 self.data.actuator('j5').ctrl[0] = j5
-            # if j6 is not None:
-            #     self.data.actuator('j6').ctrl[0] = j6
+            if j6 is not None:
+                self.data.actuator('j6').ctrl[0] = j6
 
             while (self.data.time - time_prev < 1.0/60.0):
                 mujoco.mj_step(self.model, self.data)
@@ -141,13 +141,7 @@ class InteractiveScene:
         print ("RUN DONE")
 
 def coords_to_angles(x, y, z, qw, qx, qy, qz):
-    xy = (x**2 + y**2) ** 0.5
-    xyz = (x**2 + y**2 + z**2) ** 0.5
-    yaw = math.acos(x/xy)
-    pitch = math.acos(xy/xyz)
-    ang = math.acos(xyz/MAXDIST)
-    print ("YAW:", yaw, "PITCH:", pitch, "ANG:", ang)
-    return yaw, pitch+ang, -2*ang, 0, 0 ,0
+    return 0, 0, 0, 0, 0, 0
 
 def calc_error():
     target = scene.data.body("target").xpos
