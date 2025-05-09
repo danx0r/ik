@@ -5,6 +5,9 @@ import glfw
 import argparse
 import time
 import sys, select
+import ikpy.chain
+from ikpy.link import Link
+from scipy.spatial.transform import Rotation as R
 
 MAXDIST = 2
 
@@ -13,8 +16,8 @@ MODEL_XML = f.read()
 f.close()
 
 def kbhit():
-	r = select.select([sys.stdin], [], [], 0.01)
-	return len(r[0]) > 0
+    r = select.select([sys.stdin], [], [], 0.01)
+    return len(r[0]) > 0
 
 class InteractiveScene:
     def __init__(self):
@@ -86,13 +89,6 @@ class InteractiveScene:
         self.cam.distance = max(self.cam.distance - yoffset * 0.5, 0.5)
 
     def run(self, steps=999999, j1=None, j2=None, j3=None, j4=None, j5=None, j6=None, x=None, y=None, z=None, qw=None, qx=None, qy=None, qz=None, render=True):
-        # self.data.body("cursor").xpos[0]=1
-        # print ("DBG", self.data.body("cursor").xpos)
-        # self.data.mocap_pos[0]=[-.5, 0, 0]
-        # self.data.mocap_quat[0]=[1, 0, -.4, 0]                          #pitch nose up 45 degrees
-        # self.data.mocap_quat[0]=[1, 0, 0, -.4]                          #yaw 45 degrees clockwise (top view)
-        # self.data.mocap_quat[0]=[1, .4, 0, 0]                           #roll 45 degrees clockwise/bank right
-        # self.data.mocap_quat[0]=[1, 0, -.2, .1]                           #nose up 25 deg, yaw 13 deg left (a bit of roll innit)
         while steps > 0 and not glfw.window_should_close(self.window):
             if kbhit():
                 input()
@@ -138,18 +134,154 @@ class InteractiveScene:
                 glfw.swap_buffers(self.window)
                 glfw.poll_events()
                 time.sleep(0.001)
-        print ("RUN DONE")
+        print("RUN DONE")
 
 def coords_to_angles(x, y, z, qw, qx, qy, qz):
-    return 0, 0, 0, 0, 0, 0
+    """
+    Calculate joint angles for the robot arm to reach a target position and orientation.
+    
+    Args:
+        x, y, z: Target position coordinates
+        qw, qx, qy, qz: Target orientation as a quaternion
+    
+    Returns:
+        Tuple of 6 joint angles (j1, j2, j3, j4, j5, j6)
+    """
+    # From analyzing the MuJoCo XML model, we have a 6-DOF arm with the following structure:
+    # j1: base rotation around Z axis
+    # j2: shoulder joint around -Y axis
+    # j3: elbow joint around -Y axis
+    # j4: wrist pitch around -Y axis
+    # j5: wrist roll around Z axis
+    # j6: end effector rotation around X axis
+    
+    # Create the kinematic chain based on the MuJoCo model structure
+    chain = ikpy.chain.Chain(name="arm", links=[
+        # Base frame (fixed)
+        Link(
+            name="base",
+            translation_vector=[0, 0, 0],
+            orientation=[0, 0, 0],
+            rotation=[0, 0, 0],
+            bounds=None
+        ),
+        # Joint 1 (rotates around Z axis)
+        Link(
+            name="j1_link",
+            translation_vector=[0, 0, 0],
+            orientation=[0, 0, 0],
+            rotation=[0, 0, 1],
+            bounds=(-np.pi, np.pi)
+        ),
+        # Joint 2 (rotates around -Y axis)
+        Link(
+            name="j2_link",
+            translation_vector=[0, 0, 0],
+            orientation=[0, 0, 0],
+            rotation=[0, -1, 0],
+            bounds=(-np.pi, np.pi)
+        ),
+        # Joint 3 (rotates around -Y axis)
+        Link(
+            name="j3_link",
+            translation_vector=[1, 0, 0],
+            orientation=[0, 0, 0],
+            rotation=[0, -1, 0],
+            bounds=(-np.pi, np.pi)
+        ),
+        # Joint 4 (rotates around -Y axis)
+        Link(
+            name="j4_link",
+            translation_vector=[1, 0, 0],
+            orientation=[0, 0, 0],
+            rotation=[0, -1, 0],
+            bounds=(-np.pi, np.pi)
+        ),
+        # Joint 5 (rotates around Z axis)
+        Link(
+            name="j5_link",
+            translation_vector=[0.2, 0, 0],
+            orientation=[0, 0, 0],
+            rotation=[0, 0, 1],
+            bounds=(-np.pi, np.pi)
+        ),
+        # Joint 6 (rotates around X axis)
+        Link(
+            name="j6_link",
+            translation_vector=[0.17, 0, 0],
+            orientation=[0, 0, 0],
+            rotation=[1, 0, 0],
+            bounds=(-np.pi, np.pi)
+        ),
+        # End effector (fixed)
+        Link(
+            name="end_effector",
+            translation_vector=[0.2, 0, 0],
+            orientation=[0, 0, 0],
+            rotation=[0, 0, 0],
+            bounds=None
+        )
+    ])
+    
+    # Convert quaternion to rotation matrix
+    # Note: ikpy expects rotation matrices in different format than scipy provides
+    rot = R.from_quat([qx, qy, qz, qw])
+    rot_matrix = rot.as_matrix()
+    
+    # Set up the target
+    target_position = np.array([x, y, z])
+    target_orientation = rot_matrix
+    
+    # Solve inverse kinematics
+    # We'll use an initial position to help convergence
+    initial_position = [0, 0, 0, 0, 0, 0, 0, 0]
+    
+    # Try first with orientation
+    try:
+        joint_angles = chain.inverse_kinematics(
+            target_position=target_position,
+            target_orientation=target_orientation,
+            orientation_mode="matrix",
+            initial_position=initial_position,
+            max_iter=1000
+        )
+    except Exception as e:
+        print(f"IK with orientation failed: {e}")
+        # If that fails, try without orientation constraint
+        try:
+            joint_angles = chain.inverse_kinematics(
+                target_position=target_position,
+                initial_position=initial_position,
+                max_iter=1000
+            )
+        except Exception as e:
+            print(f"IK without orientation failed: {e}")
+            # If all else fails, return a reasonable default
+            return 0, 0, 0, 0, 0, 0
+    
+    # Extract the 6 joint angles (skipping the base and end effector)
+    j1, j2, j3, j4, j5, j6 = joint_angles[1:7]
+    
+    # Normalize angles to the range [-π, π]
+    j1 = ((j1 + np.pi) % (2 * np.pi)) - np.pi
+    j2 = ((j2 + np.pi) % (2 * np.pi)) - np.pi
+    j3 = ((j3 + np.pi) % (2 * np.pi)) - np.pi
+    j4 = ((j4 + np.pi) % (2 * np.pi)) - np.pi
+    j5 = ((j5 + np.pi) % (2 * np.pi)) - np.pi
+    j6 = ((j6 + np.pi) % (2 * np.pi)) - np.pi
+    
+    return j1, j2, j3, j4, j5, j6
 
 def calc_error():
-    target = scene.data.body("target").xpos
+    """
+    Calculate the Euclidean distance between the target position (cursor) 
+    and the robot end effector.
+    """
     cursor = scene.data.body("cursor").xpos
-    # print ("CALC_ERROR", endpt, cursor)
+    endpt = scene.data.body("endpt").xpos
     tot = 0
     for i in range(3):
-        tot += (target[i]-cursor[i])**2
+        tot += (cursor[i] - endpt[i])**2
     return tot**.5
 
 def main():
@@ -158,9 +290,9 @@ def main():
     j1 = j2 = j3 = j4 = j5 = j6 = x = y = z = qw = qx = qy = qz = 0
     while True:
         steps = 3000
-        x = input("coordinates and rotation: ")
-        if x:
-            inp = x.strip().split()
+        x_input = input("coordinates and rotation: ")
+        if x_input:
+            inp = x_input.strip().split()
             x, y, z, qw, qx, qy, qz = inp
             x = float(x)
             y = float(y)
@@ -172,7 +304,7 @@ def main():
             scene.run(steps, j1, j2, j3, j4, j5, j6, x, y, z, qw, qx, qy, qz)
             j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, qw, qx, qy, qz)
         scene.run(steps, j1, j2, j3, j4, j5, j6)
-        print ("ERROR:", calc_error())
+        print("ERROR:", calc_error())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
