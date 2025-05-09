@@ -156,20 +156,6 @@ def coords_to_angles_4dof(x, y, z, qw, qx, qy, qz):
     link2_length = 1.0  # Second arm segment (j3 to j4/"target" in XML)
     link3_length = 0.2  # Third arm segment (j4 to j5 - the new target)
     
-    # Step 1: Solve for j1 (base rotation)
-    j1 = math.atan2(y, x)
-    
-    # Step 2: Calculate the target position in the frame after j1 rotation
-    c1, s1 = math.cos(j1), math.sin(j1)
-    x_r = c1 * x + s1 * y  # x in rotated frame
-    z_r = z  # z remains the same
-    
-    # Step 3: Now we need to solve for j2, j3, j4 to position j5 at the target
-    # This is a 3-link manipulator problem in the x-z plane
-    
-    # We'll use an approach that first solves for j2, j3 to position j4,
-    # and then calculates j4 to position j5
-    
     # Convert quaternion to rotation matrix for orientation constraints
     target_rot = np.array([
         [1 - 2*(qy*qy + qz*qz), 2*(qx*qy - qw*qz), 2*(qx*qz + qw*qy)],
@@ -180,12 +166,26 @@ def coords_to_angles_4dof(x, y, z, qw, qx, qy, qz):
     # Extract the target direction (x-axis of the target orientation)
     target_direction = target_rot[:, 0]
     
-    # First, we need to find where j4 should be
-    # j5 is at the target position, and j4 is link3_length away from j5 in the direction
-    # opposite to the target direction
+    # Step 1: Solve for j1 (base rotation)
+    j1 = math.atan2(y, x)
+    
+    # Step 2: Calculate the target position in the frame after j1 rotation
+    c1, s1 = math.cos(j1), math.sin(j1)
+    
+    # Define rotation matrix for j1
+    R1 = np.array([
+        [c1, -s1, 0],
+        [s1, c1, 0],
+        [0, 0, 1]
+    ])
+    
+    x_r = c1 * x + s1 * y  # x in rotated frame
+    z_r = z  # z remains the same
     
     # Rotate target direction to the frame after j1
     target_dir_j1 = R1.T @ target_direction
+    
+    # We need to ensure this is normalized
     target_dir_j1_norm = target_dir_j1 / np.linalg.norm(target_dir_j1)
     
     # Calculate j4 position - move backward from target position
@@ -288,13 +288,23 @@ def coords_to_angles_4dof(x, y, z, qw, qx, qy, qz):
     
     # Calculate j5 position
     c4, s4 = math.cos(j4), math.sin(j4)
-    p4x = p3x + link3_length * math.cos(j2 + j3 + j4)
-    p4z = p3z + link3_length * math.sin(j2 + j3 + j4)
+    R4 = np.array([
+        [c4, 0, s4],
+        [0, 1, 0],
+        [-s4, 0, c4]
+    ])
+    
+    # Local x-axis direction after j4
+    arm_dir_after_j4 = (R123 @ R4)[:, 0]
+    
+    # Calculate j5 position
+    p4_local_x = p3x + link3_length * arm_dir_after_j4[0]
+    p4_local_z = p3z + link3_length * arm_dir_after_j4[2]
     
     # Rotate back to world coordinates
-    p4_global_x = c1 * p4x
-    p4_global_y = s1 * p4x
-    p4_global_z = p4z
+    p4_global_x = c1 * p4_local_x - s1 * 0  # y component is 0 in the xz-plane
+    p4_global_y = s1 * p4_local_x + c1 * 0
+    p4_global_z = p4_local_z
     
     print(f"Forward kinematics check - j5 position: ({p4_global_x:.3f}, {p4_global_y:.3f}, {p4_global_z:.3f})")
     print(f"Error: {math.sqrt((p4_global_x-x)**2 + (p4_global_y-y)**2 + (p4_global_z-z)**2):.6f}")
@@ -309,7 +319,8 @@ def coords_to_angles_4dof(x, y, z, qw, qx, qy, qz):
 
 def coords_to_angles(x, y, z, qw, qx, qy, qz):
     """
-    Full inverse kinematics function that calls the 4-DOF version and returns zeros for j5, j6
+    Full inverse kinematics function for testing.
+    For now, this calls the 4-DOF version and returns zeros for j5, j6
     
     Args:
         x, y, z: Target position coordinates
@@ -322,7 +333,6 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz):
     j5 = j6 = 0  # We'll implement these later
     
     return j1, j2, j3, j4, j5, j6
-
 
 def calc_error():
     target = scene.data.body("target").xpos
