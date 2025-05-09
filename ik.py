@@ -5,9 +5,11 @@ import glfw
 import argparse
 import time
 import sys, select
-import ikpy.chain
-from ikpy.link import Link
 from scipy.spatial.transform import Rotation as R
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 MAXDIST = 2
 
@@ -138,7 +140,8 @@ class InteractiveScene:
 
 def coords_to_angles(x, y, z, qw, qx, qy, qz):
     """
-    Calculate joint angles for the robot arm to reach a target position and orientation.
+    Calculate joint angles for the robot arm to reach a target position and orientation
+    using a custom inverse kinematics solution without external libraries.
     
     Args:
         x, y, z: Target position coordinates
@@ -147,128 +150,142 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz):
     Returns:
         Tuple of 6 joint angles (j1, j2, j3, j4, j5, j6)
     """
-    # From analyzing the MuJoCo XML model, we have a 6-DOF arm with the following structure:
-    # j1: base rotation around Z axis
-    # j2: shoulder joint around -Y axis
-    # j3: elbow joint around -Y axis
-    # j4: wrist pitch around -Y axis
-    # j5: wrist roll around Z axis
-    # j6: end effector rotation around X axis
+    print(f"Calculating IK for position ({x}, {y}, {z}) with orientation quaternion ({qw}, {qx}, {qy}, {qz})")
     
-    # Create the kinematic chain based on the MuJoCo model structure
-    chain = ikpy.chain.Chain(name="arm", links=[
-        # Base frame (fixed)
-        Link(
-            name="base",
-            translation_vector=[0, 0, 0],
-            orientation=[0, 0, 0],
-            rotation=[0, 0, 0],
-            bounds=None
-        ),
-        # Joint 1 (rotates around Z axis)
-        Link(
-            name="j1_link",
-            translation_vector=[0, 0, 0],
-            orientation=[0, 0, 0],
-            rotation=[0, 0, 1],
-            bounds=(-np.pi, np.pi)
-        ),
-        # Joint 2 (rotates around -Y axis)
-        Link(
-            name="j2_link",
-            translation_vector=[0, 0, 0],
-            orientation=[0, 0, 0],
-            rotation=[0, -1, 0],
-            bounds=(-np.pi, np.pi)
-        ),
-        # Joint 3 (rotates around -Y axis)
-        Link(
-            name="j3_link",
-            translation_vector=[1, 0, 0],
-            orientation=[0, 0, 0],
-            rotation=[0, -1, 0],
-            bounds=(-np.pi, np.pi)
-        ),
-        # Joint 4 (rotates around -Y axis)
-        Link(
-            name="j4_link",
-            translation_vector=[1, 0, 0],
-            orientation=[0, 0, 0],
-            rotation=[0, -1, 0],
-            bounds=(-np.pi, np.pi)
-        ),
-        # Joint 5 (rotates around Z axis)
-        Link(
-            name="j5_link",
-            translation_vector=[0.2, 0, 0],
-            orientation=[0, 0, 0],
-            rotation=[0, 0, 1],
-            bounds=(-np.pi, np.pi)
-        ),
-        # Joint 6 (rotates around X axis)
-        Link(
-            name="j6_link",
-            translation_vector=[0.17, 0, 0],
-            orientation=[0, 0, 0],
-            rotation=[1, 0, 0],
-            bounds=(-np.pi, np.pi)
-        ),
-        # End effector (fixed)
-        Link(
-            name="end_effector",
-            translation_vector=[0.2, 0, 0],
-            orientation=[0, 0, 0],
-            rotation=[0, 0, 0],
-            bounds=None
-        )
-    ])
+    # Robot dimensions from MuJoCo model (based on the XML)
+    l1 = 1.0    # Length of first arm segment (from j2 to j3)
+    l2 = 1.0    # Length of second arm segment (from j3 to j4)
+    l3 = 0.2    # Length of third arm segment (from j4 to j5)
+    l4 = 0.17   # Length of fourth arm segment (from j5 to j6)
+    l5 = 0.2    # Length of end effector (from j6 to end)
     
     # Convert quaternion to rotation matrix
-    # Note: ikpy expects rotation matrices in different format than scipy provides
     rot = R.from_quat([qx, qy, qz, qw])
     rot_matrix = rot.as_matrix()
     
-    # Set up the target
-    target_position = np.array([x, y, z])
-    target_orientation = rot_matrix
+    # Extract the orientation axes
+    x_axis = rot_matrix[:, 0]  # Forward direction of end effector
+    y_axis = rot_matrix[:, 1]  # Left direction of end effector
+    z_axis = rot_matrix[:, 2]  # Up direction of end effector
     
-    # Solve inverse kinematics
-    # We'll use an initial position to help convergence
-    initial_position = [0, 0, 0, 0, 0, 0, 0, 0]
+    # Wrist position: move back from target along x-axis
+    wrist_pos = np.array([x, y, z]) - l5 * x_axis
     
-    # Try first with orientation
+    # Step 1: Calculate j1 (base rotation)
+    j1 = math.atan2(wrist_pos[1], wrist_pos[0])
+    
+    # Distance from base to wrist in XY plane
+    r_xy = math.sqrt(wrist_pos[0]**2 + wrist_pos[1]**2)
+    
+    # Height of wrist above base
+    h = wrist_pos[2]
+    
+    # We need to solve for j2 and j3
+    # The arm's kinematic structure from the XML: 
+    # - j2 rotates around -Y at the base
+    # - j3 rotates around -Y at the end of the first segment
+    
+    # Simplified 2D problem: reach [r_xy, h] with two segments
+    # Length of segments in the 2D problem
+    seg1 = l1
+    seg2 = l2 + l3 + l4  # Combined length of remaining segments
+    
+    # Distance from base to wrist
+    d = math.sqrt(r_xy**2 + h**2)
+    
+    # Angle from horizontal to wrist
+    phi = math.atan2(h, r_xy)
+    
+    # Check if target is reachable
+    if d > (seg1 + seg2):
+        print(f"Warning: Target position is out of reach. Distance: {d:.3f}, Max reach: {seg1 + seg2:.3f}")
+        # Scale the position to be reachable
+        wrist_pos = wrist_pos * (0.95 * (seg1 + seg2) / d)
+        r_xy = math.sqrt(wrist_pos[0]**2 + wrist_pos[1]**2)
+        h = wrist_pos[2]
+        d = math.sqrt(r_xy**2 + h**2)
+        phi = math.atan2(h, r_xy)
+    
+    # Calculate j3 using law of cosines
+    cos_j3 = (d**2 - seg1**2 - seg2**2) / (2 * seg1 * seg2)
+    
+    # Ensure cos_j3 is in valid range [-1, 1]
+    cos_j3 = max(-1.0, min(1.0, cos_j3))
+    
+    # Elbow angle (negative due to rotation around -Y)
+    j3 = -math.acos(cos_j3)
+    
+    # Calculate j2 using geometry
+    # Angle from segment 1 to the line from base to wrist
+    beta = math.acos((seg1**2 + d**2 - seg2**2) / (2 * seg1 * d))
+    
+    # Shoulder angle
+    j2 = phi - beta
+    
+    # Now for the wrist angles (j4, j5, j6)
+    # We need to determine orientation of the end effector
+    
+    # Calculate the rotation matrix from base to the end of j3 (before wrist)
+    c1, s1 = math.cos(j1), math.sin(j1)
+    c2, s2 = math.cos(j2), math.sin(j2)
+    c3, s3 = math.cos(j3), math.sin(j3)
+    
+    # Rotation matrices for each joint
+    R1 = np.array([
+        [c1, -s1, 0],
+        [s1, c1, 0],
+        [0, 0, 1]
+    ])
+    
+    R2 = np.array([
+        [c2, 0, s2],
+        [0, 1, 0],
+        [-s2, 0, c2]
+    ])
+    
+    R3 = np.array([
+        [c3, 0, s3],
+        [0, 1, 0],
+        [-s3, 0, c3]
+    ])
+    
+    # Combined rotation matrix up to j3
+    R_0_3 = R1 @ R2 @ R3
+    
+    # Desired rotation from j3 to end effector
+    R_3_6 = R_0_3.T @ rot_matrix
+    
+    # Extract Euler angles ZYX from this rotation matrix
+    # This gives us j4, j5, j6
     try:
-        joint_angles = chain.inverse_kinematics(
-            target_position=target_position,
-            target_orientation=target_orientation,
-            orientation_mode="matrix",
-            initial_position=initial_position,
-            max_iter=1000
-        )
+        # Check for singularity
+        if abs(R_3_6[0, 2]) >= 0.99999:
+            # Gimbal lock case
+            j5 = math.pi/2 if R_3_6[0, 2] > 0 else -math.pi/2
+            j4 = 0  # Can be arbitrary
+            j6 = math.atan2(R_3_6[1, 0], R_3_6[1, 1])
+        else:
+            j5 = math.asin(-R_3_6[0, 2])
+            j4 = math.atan2(R_3_6[1, 2], R_3_6[2, 2])
+            j6 = math.atan2(R_3_6[0, 1], R_3_6[0, 0])
     except Exception as e:
-        print(f"IK with orientation failed: {e}")
-        # If that fails, try without orientation constraint
-        try:
-            joint_angles = chain.inverse_kinematics(
-                target_position=target_position,
-                initial_position=initial_position,
-                max_iter=1000
-            )
-        except Exception as e:
-            print(f"IK without orientation failed: {e}")
-            # If all else fails, return a reasonable default
-            return 0, 0, 0, 0, 0, 0
+        print(f"Error calculating wrist angles: {e}")
+        # Fallback to simple values
+        j4 = j5 = j6 = 0
     
-    # Extract the 6 joint angles (skipping the base and end effector)
-    j1, j2, j3, j4, j5, j6 = joint_angles[1:7]
+    # In our robot model, j4 and j5 rotate around -Y, so we need to negate them
+    j4 = -j4
+    j5 = -j5
     
-    # Normalize angles to the range [-π, π]
-    j1 = ((j1 + np.pi) % (2 * np.pi)) - np.pi
-    j2 = ((j2 + np.pi) % (2 * np.pi)) - np.pi
-    j3 = ((j3 + np.pi) % (2 * np.pi)) - np.pi
-    j4 = ((j4 + np.pi) % (2 * np.pi)) - np.pi
-    j5 = ((j5 + np.pi) % (2 * np.pi)) - np.pi
-    j6 = ((j6 + np.pi) % (2 * np.pi)) - np.pi
+    # Normalize all angles to the range [-π, π]
+    j1 = ((j1 + math.pi) % (2 * math.pi)) - math.pi
+    j2 = ((j2 + math.pi) % (2 * math.pi)) - math.pi
+    j3 = ((j3 + math.pi) % (2 * math.pi)) - math.pi
+    j4 = ((j4 + math.pi) % (2 * math.pi)) - math.pi
+    j5 = ((j5 + math.pi) % (2 * math.pi)) - math.pi
+    j6 = ((j6 + math.pi) % (2 * math.pi)) - math.pi
+    
+    print(f"Computed joint angles: j1={j1:.4f}, j2={j2:.4f}, j3={j3:.4f}, j4={j4:.4f}, j5={j5:.4f}, j6={j6:.4f}")
     
     return j1, j2, j3, j4, j5, j6
 
@@ -290,21 +307,55 @@ def main():
     j1 = j2 = j3 = j4 = j5 = j6 = x = y = z = qw = qx = qy = qz = 0
     while True:
         steps = 3000
-        x_input = input("coordinates and rotation: ")
-        if x_input:
-            inp = x_input.strip().split()
-            x, y, z, qw, qx, qy, qz = inp
-            x = float(x)
-            y = float(y)
-            z = float(z)
-            qw = float(qw)
-            qx = float(qx)
-            qy = float(qy)
-            qz = float(qz)
-            scene.run(steps, j1, j2, j3, j4, j5, j6, x, y, z, qw, qx, qy, qz)
-            j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, qw, qx, qy, qz)
-        scene.run(steps, j1, j2, j3, j4, j5, j6)
-        print("ERROR:", calc_error())
+        try:
+            x_input = input("coordinates and rotation (x y z qw qx qy qz): ")
+            if not x_input.strip():
+                continue
+                
+            if x_input:
+                inp = x_input.strip().split()
+                if len(inp) != 7:
+                    print("Error: Please enter 7 values (x y z qw qx qy qz)")
+                    continue
+                    
+                try:
+                    x, y, z, qw, qx, qy, qz = [float(val) for val in inp]
+                except ValueError:
+                    print("Error: All values must be numbers")
+                    continue
+                    
+                # Normalize quaternion
+                quat_norm = math.sqrt(qw**2 + qx**2 + qy**2 + qz**2)
+                if abs(quat_norm - 1.0) > 0.01:
+                    print(f"Warning: Quaternion not normalized. Norm = {quat_norm}")
+                    qw /= quat_norm
+                    qx /= quat_norm
+                    qy /= quat_norm
+                    qz /= quat_norm
+                    print(f"Normalized quaternion: {qw:.4f} {qx:.4f} {qy:.4f} {qz:.4f}")
+                
+                print(f"Moving cursor to position ({x}, {y}, {z})")
+                scene.run(steps, j1, j2, j3, j4, j5, j6, x, y, z, qw, qx, qy, qz)
+                print("Calculating joint angles...")
+                j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, qw, qx, qy, qz)
+                print(f"Calculated joint angles: {j1:.4f}, {j2:.4f}, {j3:.4f}, {j4:.4f}, {j5:.4f}, {j6:.4f}")
+                
+            scene.run(steps, j1, j2, j3, j4, j5, j6)
+            error = calc_error()
+            print(f"ERROR: {error:.6f}")
+            if error < 0.1:
+                print("Target position reached successfully!")
+            elif error < 0.5:
+                print("Close to target position.")
+            else:
+                print("Warning: Significant error in position. Target may be unreachable or IK solution is not optimal.")
+                
+        except KeyboardInterrupt:
+            print("\nExiting program...")
+            break
+        except Exception as e:
+            print(f"Error occurred: {e}")
+            print("Please try again.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
