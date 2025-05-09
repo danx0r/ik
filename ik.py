@@ -86,11 +86,11 @@ class InteractiveScene:
     def _scroll(self, window, xoffset, yoffset):
         self.cam.distance = max(self.cam.distance - yoffset * 0.5, 0.5)
 
-    def run(self, steps=999999, j1=None, j2=None, j3=None, j4=None, j5=None, j6=None, x=None, y=None, z=None, p=None, w=None, r=None, render=True):
+    def run(self, steps=999999, j1=None, j2=None, j3=None, j4=None, j5=None, j6=None, x=None, y=None, z=None, qw=None, qx=None, qy=None, qz=None, render=True):
         # self.data.body("cursor").xpos[0]=1
         # print ("DBG", self.data.body("cursor").xpos)
-        self.data.mocap_pos[0]=[-.5, 0, 0]
-        self.data.mocap_quat[0]=[1, 0, -.4, 0]                          #pitch nose up 45 degrees
+        # self.data.mocap_pos[0]=[-.5, 0, 0]
+        # self.data.mocap_quat[0]=[1, 0, -.4, 0]                          #pitch nose up 45 degrees
         # self.data.mocap_quat[0]=[1, 0, 0, -.4]                          #yaw 45 degrees clockwise (top view)
         # self.data.mocap_quat[0]=[1, .4, 0, 0]                           #roll 45 degrees clockwise/bank right
         # self.data.mocap_quat[0]=[1, 0, -.2, .1]                           #nose up 25 deg, yaw 13 deg left (a bit of roll innit)
@@ -101,31 +101,24 @@ class InteractiveScene:
             steps -= 1
             time_prev = self.data.time
 
-            # if x is not None:
-            #     self.data.actuator('cursor_x').ctrl[0] = x
-            # if y is not None:
-            #     self.data.actuator('cursor_y').ctrl[0] = y
-            # if z is not None:
-            #     self.data.actuator('cursor_z').ctrl[0] = z
-            # if p is not None:
-            #     self.data.actuator('cursor_p').ctrl[0] = p
-            # if w is not None:
-            #     self.data.actuator('cursor_w').ctrl[0] = w
-            # if r is not None:
-            #     self.data.actuator('cursor_r').ctrl[0] = r
+            if x is not None:
+                self.data.mocap_pos[0]=[x, y, z]
 
-            # if j1 is not None:
-            #     self.data.actuator('j1').ctrl[0] = j1
-            # if j2 is not None:
-            #     self.data.actuator('j2').ctrl[0] = j2
-            # if j3 is not None:
-            #     self.data.actuator('j3').ctrl[0] = j3
-            # if j4 is not None:
-            #     self.data.actuator('j4').ctrl[0] = j4
-            # if j5 is not None:
-            #     self.data.actuator('j5').ctrl[0] = j5
-            # if j6 is not None:
-            #     self.data.actuator('j5').ctrl[0] = j6
+            if qw is not None:
+                self.data.mocap_quat[0]=[qw, qx, qy, qz]
+
+            if j1 is not None:
+                self.data.actuator('j1').ctrl[0] = j1
+            if j2 is not None:
+                self.data.actuator('j2').ctrl[0] = j2
+            if j3 is not None:
+                self.data.actuator('j3').ctrl[0] = j3
+            if j4 is not None:
+                self.data.actuator('j4').ctrl[0] = j4
+            if j5 is not None:
+                self.data.actuator('j5').ctrl[0] = j5
+            if j6 is not None:
+                self.data.actuator('j5').ctrl[0] = j6
 
             while (self.data.time - time_prev < 1.0/60.0):
                 mujoco.mj_step(self.model, self.data)
@@ -148,7 +141,7 @@ class InteractiveScene:
                 time.sleep(0.001)
         print ("RUN DONE")
 
-def coords_to_angles(x, y, z, pitch, yaw, roll):
+def coords_to_angles(x, y, z, qw, qx, qy, qz):
     xy = (x**2 + y**2) ** 0.5
     xyz = (x**2 + y**2 + z**2) ** 0.5
     if xy==0:
@@ -170,22 +163,22 @@ def calc_error():
 def main():
     global scene
     scene = InteractiveScene()
-    j1 = j2 = j3 = j4 = j5 = j6 = x = y = z = 0
+    j1 = j2 = j3 = j4 = j5 = j6 = x = y = z = qw = qx = qy = qz = 0
     while True:
         steps = 3000
         x = input("coordinates and rotation: ")
         if x:
-            poff = 0.2          #length of last segment ('twixt j4 & endpt)
             inp = x.strip().split()
-            x, y, z, p, w, r = inp
+            x, y, z, qw, qx, qy, qz = inp
             x = float(x)
             y = float(y)
             z = float(z)
-            p = float(p)/RAD2DEG #pitch
-            w = float(w)/RAD2DEG #yaW; y was already taken
-            r = float(r)/RAD2DEG #roll
-            scene.run(steps, j1, j2, j3, j4, j5, j6, x, y, z, p, w, r)
-            j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, p, w, r)
+            qw = float(qw)
+            qx = float(qx)
+            qy = float(qy)
+            qz = float(qz)
+            scene.run(steps, j1, j2, j3, j4, j5, j6, x, y, z, qw, qx, qy, qz)
+            j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, qw, qx, qy, qz)
         scene.run(steps, j1, j2, j3, j4, j5, j6)
         print ("ERROR:", calc_error())
 

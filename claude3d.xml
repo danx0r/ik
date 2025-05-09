@@ -55,11 +55,5 @@
         <position name="j3" kp="500" kv="100" joint="j3"/>
         <position name="j4" kp="50" kv="10" joint="j4"/>
         <position name="j5" kp="50" kv="10" joint="j5"/>
-        <!-- <position name="cursor_x" inheritrange="0" kp="5" kv="2" joint="cursor_x"/>
-        <position name="cursor_y" inheritrange="0" kp="5" kv="2" joint="cursor_y"/>
-        <position name="cursor_z" inheritrange="0" kp="5" kv="2" joint="cursor_z"/>
-        <position name="cursor_p" kp="3" kv="1" joint="cursor_p"/>
-        <position name="cursor_w" kp="3" kv="1" joint="cursor_w"/> -->
-        <!-- <position name="cursor_r" kp="3" kv="1" joint="cursor_r"/> -->
     </actuator>
 </mujoco>
