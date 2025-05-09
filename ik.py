@@ -6,7 +6,6 @@ import argparse
 import time
 import sys, select
 
-RAD2DEG=57.2958
 MAXDIST = 2
 
 f = open("claude3d.xml")
@@ -117,8 +116,8 @@ class InteractiveScene:
                 self.data.actuator('j4').ctrl[0] = j4
             if j5 is not None:
                 self.data.actuator('j5').ctrl[0] = j5
-            if j6 is not None:
-                self.data.actuator('j5').ctrl[0] = j6
+            # if j6 is not None:
+            #     self.data.actuator('j6').ctrl[0] = j6
 
             while (self.data.time - time_prev < 1.0/60.0):
                 mujoco.mj_step(self.model, self.data)
@@ -144,12 +143,11 @@ class InteractiveScene:
 def coords_to_angles(x, y, z, qw, qx, qy, qz):
     xy = (x**2 + y**2) ** 0.5
     xyz = (x**2 + y**2 + z**2) ** 0.5
-    if xy==0:
-        xy = 0.0000001
-    if xyz==0:
-        xyz = 0.0000001 #OH yes I did
-    ang = math.acos(min(1, (xyz/MAXDIST))) * RAD2DEG
-    return 0, 0, 0, 0, 0, 0
+    yaw = math.acos(x/xy)
+    pitch = math.acos(xy/xyz)
+    ang = math.acos(xyz/MAXDIST)
+    print ("YAW:", yaw, "PITCH:", pitch, "ANG:", ang)
+    return yaw, pitch+ang, -2*ang, 0, 0 ,0
 
 def calc_error():
     target = scene.data.body("target").xpos
