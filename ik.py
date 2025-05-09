@@ -155,6 +155,11 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz):
     # Use numerical optimization to find joint angles
     # This is more robust than analytical solutions for complex robots
     
+    # Convert quaternion to rotation matrix once
+    from scipy.spatial.transform import Rotation
+    target_rot = Rotation.from_quat([qx, qy, qz, qw])
+    target_rot_matrix = target_rot.as_matrix()
+    
     # Function to calculate forward kinematics
     def forward_kinematics(joint_angles):
         j1, j2, j3, j4, j5, j6 = joint_angles
@@ -262,9 +267,7 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz):
         pos_error = np.linalg.norm(p - target_pos)
         
         # Calculate orientation error
-        target_R = R.from_quat([qx, qy, qz, qw]).as_matrix()
-        # Frobenius norm of the difference between rotation matrices
-        ori_error = np.linalg.norm(R - target_R, 'fro')
+        ori_error = np.linalg.norm(R - target_rot_matrix, 'fro')
         
         # Weighted sum of errors (position is more important than orientation)
         return pos_error + 0.1 * ori_error
