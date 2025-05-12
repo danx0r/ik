@@ -141,17 +141,34 @@ class InteractiveScene:
                 time.sleep(0.001)
         print ("RUN DONE")
 
-def coords_to_angles(x, y, z, qw, qx, qy, qz):
-    return 0, 0, 0, 0, 0, 0
-
+def angles_to_endpt(j1, j2, j3, j4, j5, j6):
+    scene.data.joint('j1').qpos[0] = j1
+    scene.data.joint('j2').qpos[0] = j2
+    scene.data.joint('j3').qpos[0] = j3
+    scene.data.joint('j4').qpos[0] = j4
+    scene.data.joint('j5').qpos[0] = j5
+    scene.data.joint('j6').qpos[0] = j6
+    scene.run(1)
+    ep = scene.data.body['endpt']
+    pos = ep.xpos
+    quat = ep.xquat
+    return pos, quat
+    
 def calc_error():
-    cursor = scene.data.body("cursor").xpos
+    curpos = scene.data.body("cursor").xpos
+    curq = scene.data.body("cursor").xquat
     endpt = scene.data.body("endpt").xpos
+    endq = scene.data.body("endpt").xquat
     # print ("CALC_ERROR", endpt, cursor)
     tot = 0
     for i in range(3):
-        tot += (cursor[i]-endpt[i])**2
+        tot += (curpos[i]-endpt[i])**2
+    for i in range(4):
+        tot += (curq[i]-endq[i])**2 * 100
     return tot**.5
+
+def coords_to_angles(x, y, z, qw, qx, qy, qz):
+    return 0, 0, 0, 0, 0, 0
 
 def main():
     global scene
