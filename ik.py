@@ -163,11 +163,14 @@ def calc_error():
     endpt = scene.data.body("endpt").xpos
     endq = scene.data.body("endpt").xquat
     tot = 0
+    for i in range(4):
+        tot += (curq[i]-endq[i])**2 * .01
+    q = tot
     for i in range(3):
         tot += (curpos[i]-endpt[i])**2
-    for i in range(4):
-        tot += (curq[i]-endq[i])**2 * 100
-    return tot**.5
+    err = tot**.5
+    print ("cur:", curpos, "end:", endpt, "rot:", q**.5, "total:", err)
+    return err
 
 def coords_to_angles(x, y, z, qw, qx, qy, qz):
     angles = []
