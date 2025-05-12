@@ -1,4 +1,5 @@
 import math
+import random
 import mujoco
 import numpy as np
 import glfw
@@ -141,6 +142,8 @@ class InteractiveScene:
                 time.sleep(0.001)
         print ("RUN DONE")
 
+
+#Note this function has side effects (changes joint positions in scene)
 def angles_to_endpt(j1, j2, j3, j4, j5, j6):
     scene.data.joint('j1').qpos[0] = j1
     scene.data.joint('j2').qpos[0] = j2
@@ -149,7 +152,7 @@ def angles_to_endpt(j1, j2, j3, j4, j5, j6):
     scene.data.joint('j5').qpos[0] = j5
     scene.data.joint('j6').qpos[0] = j6
     scene.run(1)
-    ep = scene.data.body['endpt']
+    ep = scene.data.body('endpt')
     pos = ep.xpos
     quat = ep.xquat
     return pos, quat
@@ -159,7 +162,6 @@ def calc_error():
     curq = scene.data.body("cursor").xquat
     endpt = scene.data.body("endpt").xpos
     endq = scene.data.body("endpt").xquat
-    # print ("CALC_ERROR", endpt, cursor)
     tot = 0
     for i in range(3):
         tot += (curpos[i]-endpt[i])**2
@@ -168,7 +170,14 @@ def calc_error():
     return tot**.5
 
 def coords_to_angles(x, y, z, qw, qx, qy, qz):
-    return 0, 0, 0, 0, 0, 0
+    angles = []
+    for i in range(5):
+        angles.append(random.random()*5.75-2.875)
+    angles.append(random.random()*6.28-3.14)
+    pos, quat = angles_to_endpt(*angles)            #modifies scene joint angles
+    err = calc_error()
+    print ("ERR:", err)
+    return angles
 
 def main():
     global scene
@@ -188,7 +197,7 @@ def main():
             qy = float(qy)
             qz = float(qz)
             scene.run(steps, j1, j2, j3, j4, j5, j6, x, y, z, qw, qx, qy, qz)
-            j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, qw, qx, qy, qz)
+        j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, qw, qx, qy, qz)
         scene.run(steps, j1, j2, j3, j4, j5, j6)
         print ("ERROR:", calc_error())
 
