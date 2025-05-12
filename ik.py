@@ -173,14 +173,21 @@ def calc_error():
     return err
 
 def coords_to_angles(x, y, z, qw, qx, qy, qz):
-    angles = []
-    for i in range(5):
-        angles.append(random.random()*5.75-2.875)
-    angles.append(random.random()*6.28-3.14)
-    pos, quat = angles_to_endpt(*angles)            #modifies scene joint angles
-    err = calc_error()
-    print ("ERR:", err)
-    return angles
+    best = 999999
+    for i in range(100):
+        angles = []
+        for j in range(5):
+            angles.append(random.random()*5.75-2.875)
+        angles.append(random.random()*6.28-3.14)
+        pos, quat = angles_to_endpt(*angles)            #modifies scene joint angles
+        err = calc_error()
+        if err < best:
+            best = err
+            win = angles
+        print (i, "DEBUG:", err, best, win)
+        # input()
+    angles_to_endpt(*win)
+    return win
 
 def main():
     global scene
@@ -201,6 +208,7 @@ def main():
             qz = float(qz)
             scene.run(steps, j1, j2, j3, j4, j5, j6, x, y, z, qw, qx, qy, qz)
         j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, qw, qx, qy, qz)
+        print ("DERIVED ANGLES:", j1, j2, j3, j4, j5, j6)
         scene.run(steps, j1, j2, j3, j4, j5, j6)
         print ("ERROR:", calc_error())
 
