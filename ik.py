@@ -8,7 +8,8 @@ import sys, select
 
 MAXDIST = 2
 
-f = open("claude3d.xml")
+# f = open("claude3d.xml")
+f = open("tycho_arm.mjcf")
 MODEL_XML = f.read()
 f.close()
 
@@ -144,12 +145,12 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz):
     return 0, 0, 0, 0, 0, 0
 
 def calc_error():
-    target = scene.data.body("target").xpos
     cursor = scene.data.body("cursor").xpos
+    endpt = scene.data.body("endpt").xpos
     # print ("CALC_ERROR", endpt, cursor)
     tot = 0
     for i in range(3):
-        tot += (target[i]-cursor[i])**2
+        tot += (cursor[i]-endpt[i])**2
     return tot**.5
 
 def main():
