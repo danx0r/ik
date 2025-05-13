@@ -151,6 +151,12 @@ def forward_kinematic(j1, j2, j3, j4, j5, j6):
     scene.data.joint('j4').qpos[0] = j4
     scene.data.joint('j5').qpos[0] = j5
     scene.data.joint('j6').qpos[0] = j6
+    scene.data.actuator('j1').ctrl[0] = j1
+    scene.data.actuator('j2').ctrl[0] = j2
+    scene.data.actuator('j3').ctrl[0] = j3
+    scene.data.actuator('j4').ctrl[0] = j4
+    scene.data.actuator('j5').ctrl[0] = j5
+    scene.data.actuator('j6').ctrl[0] = j6
     scene.run(1)
     
 def calc_error():
@@ -160,7 +166,7 @@ def calc_error():
     endq = scene.data.body("endpt").xquat
     tot = 0
     for i in range(4):
-        tot += (curq[i]-endq[i])**2 * .04
+        tot += (curq[i]-endq[i])**2 * .025
     q = tot
     for i in range(3):
         tot += (curpos[i]-endpt[i])**2
@@ -172,7 +178,7 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz):
     best = 999999
     winner = [0, 0, 0, 0, 0, 0]
     tweak = 0.8
-    for i in range(300):
+    for i in range(50):
         print ("TWEAK", tweak)
         angles_plus = copy(winner)
         angles_minus = copy(winner)
@@ -195,15 +201,15 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz):
         elif err_minus < err_plus and err_minus < err_neutral:
             winner = angles_minus
             best = err_minus
-        if tweak > 0.02:
-            tweak *=.98
-        print (i, "WINNER:", best, winner)
+        if tweak > 0.0001:
+            tweak *=.995
+        print (i, "WINNER:", winner, best)
         # input()
     forward_kinematic(*winner)
     return winner
 
 def main():
-    global scene
+    global scene, j1, j2, j3, j4, j5, j6
     scene = InteractiveScene()
     j1 = j2 = j3 = j4 = j5 = j6 = x = y = z = qw = qx = qy = qz = 0
     while True:
@@ -221,10 +227,13 @@ def main():
             qz = float(qz)
             scene.run(steps, j1, j2, j3, j4, j5, j6, x, y, z, qw, qx, qy, qz)
         j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, qw, qx, qy, qz)
-        print ("DERIVED ANGLES:", j1, j2, j3, j4, j5, j6)
+        print (f"IK ANGLES: {j1}, {j2}, {j3}, {j4}, {j5}, {j6}") 
+        print (f"ACTUAL: {scene.data.joint('j1').qpos[0]}, {scene.data.joint('j2').qpos[0]}, {scene.data.joint('j3').qpos[0]}, {scene.data.joint('j4').qpos[0]}, {scene.data.joint('j5').qpos[0]}, {scene.data.joint('j6').qpos[0]}")
         scene.run(1, j1, j2, j3, j4, j5, j6)
+        print (f"ACTUAL: {scene.data.joint('j1').qpos[0]}, {scene.data.joint('j2').qpos[0]}, {scene.data.joint('j3').qpos[0]}, {scene.data.joint('j4').qpos[0]}, {scene.data.joint('j5').qpos[0]}, {scene.data.joint('j6').qpos[0]}")
         input()
         scene.run(steps, j1, j2, j3, j4, j5, j6)
+        print (f"ACTUAL: {scene.data.joint('j1').qpos[0]}, {scene.data.joint('j2').qpos[0]}, {scene.data.joint('j3').qpos[0]}, {scene.data.joint('j4').qpos[0]}, {scene.data.joint('j5').qpos[0]}, {scene.data.joint('j6').qpos[0]}")
         print ("ERROR:", calc_error())
 
 if __name__ == "__main__":
