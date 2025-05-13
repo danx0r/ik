@@ -166,7 +166,7 @@ def calc_error():
     endq = scene.data.body("endpt").xquat
     tot = 0
     for i in range(4):
-        tot += (curq[i]-endq[i])**2 * .025
+        tot += (curq[i]-endq[i])**2 * .25
     q = tot
     for i in range(3):
         tot += (curpos[i]-endpt[i])**2
@@ -178,7 +178,7 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz):
     best = 999999
     winner = [0, 0, 0, 0, 0, 0]
     tweak = 0.8
-    for i in range(50):
+    for i in range(500):
         print ("TWEAK", tweak)
         angles_plus = copy(winner)
         angles_minus = copy(winner)
@@ -201,8 +201,8 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz):
         elif err_minus < err_plus and err_minus < err_neutral:
             winner = angles_minus
             best = err_minus
-        if tweak > 0.0001:
-            tweak *=.995
+        if tweak > 0.001:
+            tweak *=.98
         print (i, "WINNER:", winner, best)
         # input()
     forward_kinematic(*winner)
