@@ -1,4 +1,4 @@
-import math
+from copy import copy
 import random
 import mujoco
 import numpy as np
@@ -144,7 +144,7 @@ class InteractiveScene:
 
 
 #Note this function has side effects (changes joint positions in scene)
-def angles_to_endpt(j1, j2, j3, j4, j5, j6):
+def forward_kinematic(j1, j2, j3, j4, j5, j6):
     scene.data.joint('j1').qpos[0] = j1
     scene.data.joint('j2').qpos[0] = j2
     scene.data.joint('j3').qpos[0] = j3
@@ -152,10 +152,6 @@ def angles_to_endpt(j1, j2, j3, j4, j5, j6):
     scene.data.joint('j5').qpos[0] = j5
     scene.data.joint('j6').qpos[0] = j6
     scene.run(1)
-    ep = scene.data.body('endpt')
-    pos = ep.xpos
-    quat = ep.xquat
-    return pos, quat
     
 def calc_error():
     curpos = scene.data.body("cursor").xpos
@@ -164,7 +160,7 @@ def calc_error():
     endq = scene.data.body("endpt").xquat
     tot = 0
     for i in range(4):
-        tot += (curq[i]-endq[i])**2 * .01
+        tot += (curq[i]-endq[i])**2 * .04
     q = tot
     for i in range(3):
         tot += (curpos[i]-endpt[i])**2
@@ -174,20 +170,37 @@ def calc_error():
 
 def coords_to_angles(x, y, z, qw, qx, qy, qz):
     best = 999999
-    for i in range(100):
-        angles = []
-        for j in range(5):
-            angles.append(random.random()*5.75-2.875)
-        angles.append(random.random()*6.28-3.14)
-        pos, quat = angles_to_endpt(*angles)            #modifies scene joint angles
-        err = calc_error()
-        if err < best:
-            best = err
-            win = angles
-        print (i, "DEBUG:", err, best, win)
+    winner = [0, 0, 0, 0, 0, 0]
+    tweak = 0.5
+    for i in range(500):
+        print ("TWEAK", tweak)
+        angles_plus = copy(winner)
+        angles_minus = copy(winner)
+        forward_kinematic(*winner)
+        err_neutral = calc_error()
+        maxx = 2.875
+        j = random.randint(0, 5)
+        if j == 5:
+            maxx = 3.14
+        angles_plus[j] = min(maxx, angles_plus[j] + tweak * random.random())
+        forward_kinematic(*angles_plus)
+        err_plus = calc_error()
+        angles_minus[j] = max(-maxx, angles_minus[j] - tweak * random.random())
+        forward_kinematic(*angles_minus)
+        err_minus = calc_error()
+
+        if err_plus < err_minus and err_plus< err_neutral:
+            winner = angles_plus
+            best = err_plus
+        elif err_minus < err_plus and err_minus < err_neutral:
+            winner = angles_minus
+            best = err_minus
+        if tweak > 0.05:
+            tweak *=.99
+        print (i, "WINNER:", best, winner)
         # input()
-    angles_to_endpt(*win)
-    return win
+    forward_kinematic(*winner)
+    return winner
 
 def main():
     global scene
@@ -209,6 +222,7 @@ def main():
             scene.run(steps, j1, j2, j3, j4, j5, j6, x, y, z, qw, qx, qy, qz)
         j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, qw, qx, qy, qz)
         print ("DERIVED ANGLES:", j1, j2, j3, j4, j5, j6)
+        scene.run(1, j1, j2, j3, j4, j5, j6)
         scene.run(steps, j1, j2, j3, j4, j5, j6)
         print ("ERROR:", calc_error())
 
