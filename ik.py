@@ -171,8 +171,8 @@ def calc_error():
 def coords_to_angles(x, y, z, qw, qx, qy, qz):
     best = 999999
     winner = [0, 0, 0, 0, 0, 0]
-    tweak = 0.5
-    for i in range(500):
+    tweak = 0.8
+    for i in range(300):
         print ("TWEAK", tweak)
         angles_plus = copy(winner)
         angles_minus = copy(winner)
@@ -195,8 +195,8 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz):
         elif err_minus < err_plus and err_minus < err_neutral:
             winner = angles_minus
             best = err_minus
-        if tweak > 0.05:
-            tweak *=.99
+        if tweak > 0.02:
+            tweak *=.98
         print (i, "WINNER:", best, winner)
         # input()
     forward_kinematic(*winner)
@@ -223,6 +223,7 @@ def main():
         j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, qw, qx, qy, qz)
         print ("DERIVED ANGLES:", j1, j2, j3, j4, j5, j6)
         scene.run(1, j1, j2, j3, j4, j5, j6)
+        input()
         scene.run(steps, j1, j2, j3, j4, j5, j6)
         print ("ERROR:", calc_error())
 
