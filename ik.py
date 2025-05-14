@@ -166,7 +166,7 @@ def calc_error():
     endq = scene.data.body("endpt").xquat
     tot = 0
     for i in range(4):
-        tot += (curq[i]-endq[i])**2 * .25
+        tot += (curq[i]-endq[i])**2 * .1
     q = tot
     for i in range(3):
         tot += (curpos[i]-endpt[i])**2
@@ -176,35 +176,28 @@ def calc_error():
 
 def coords_to_angles(x, y, z, qw, qx, qy, qz):
     best = 999999
+    delta = 0.1
     winner = [0, 0, 0, 0, 0, 0]
-    tweak = 0.8
-    for i in range(500):
-        print ("TWEAK", tweak)
-        angles_plus = copy(winner)
-        angles_minus = copy(winner)
-        forward_kinematic(*winner)
-        err_neutral = calc_error()
+    for i in range(1000):
+        ang_old = copy(winner)
+        ang_new = []
         maxx = 2.875
-        j = random.randint(0, 5)
-        if j == 5:
-            maxx = 3.14
-        angles_plus[j] = min(maxx, angles_plus[j] + tweak * random.random())
-        forward_kinematic(*angles_plus)
-        err_plus = calc_error()
-        angles_minus[j] = max(-maxx, angles_minus[j] - tweak * random.random())
-        forward_kinematic(*angles_minus)
-        err_minus = calc_error()
-
-        if err_plus < err_minus and err_plus< err_neutral:
-            winner = angles_plus
-            best = err_plus
-        elif err_minus < err_plus and err_minus < err_neutral:
-            winner = angles_minus
-            best = err_minus
-        if tweak > 0.001:
-            tweak *=.98
+        for j in range(6):
+            ang_new.append(ang_old[j] + (random.gauss(0, delta)))
+            if j == 5:
+                maxx = 3.14
+            if ang_new[j] < -maxx:
+                ang_new[j] = -maxx
+            if ang_new[j] > maxx:
+                ang_new[j] = maxx
+        forward_kinematic(*ang_new)
+        err = calc_error()
+        if err < best:
+            best = err
+            winner = copy(ang_new)
         print (i, "WINNER:", winner, best)
         # input()
+        delta *= .997
     forward_kinematic(*winner)
     return winner
 
