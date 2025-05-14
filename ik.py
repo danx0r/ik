@@ -97,7 +97,7 @@ class InteractiveScene:
         # self.data.mocap_quat[0]=[1, 0, -.2, .1]                           #nose up 25 deg, yaw 13 deg left (a bit of roll innit)
         while steps > 0 and not glfw.window_should_close(self.window):
             if kbhit():
-                input()
+                input("again")
                 break
             steps -= 1
             time_prev = self.data.time
@@ -140,7 +140,8 @@ class InteractiveScene:
                 glfw.swap_buffers(self.window)
                 glfw.poll_events()
                 time.sleep(0.001)
-        print ("RUN DONE")
+        if DEBUG:
+            print ("RUN DONE")
 
 
 #Note this function has side effects (changes joint positions in scene)
@@ -157,7 +158,7 @@ def forward_kinematic(j1, j2, j3, j4, j5, j6):
     scene.data.actuator('j4').ctrl[0] = j4
     scene.data.actuator('j5').ctrl[0] = j5
     scene.data.actuator('j6').ctrl[0] = j6
-    scene.run(1)
+    scene.run(1, render=args.render)
     
 def calc_error():
     curpos = scene.data.body("cursor").xpos
@@ -171,7 +172,8 @@ def calc_error():
     for i in range(3):
         tot += (curpos[i]-endpt[i])**2
     err = tot**.5
-    print ("cur:", curpos, "end:", endpt, "rot:", q**.5, "total:", err)
+    if DEBUG:
+        print ("CUR:", curpos, "end:", endpt, "rot:", q**.5, "total:", err)
     return err
 
 def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
@@ -198,12 +200,14 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
         if err < best:
             best = err
             winner = copy(ang_new)
-        print (i, "WINNER:", winner, best)
+        if DEBUG:
+            print (i, "WINNER:", winner, best)
         # input()
         if err < 0.01:
             break
         delta *= .997
     forward_kinematic(*winner)
+    print ("STEPS:", i)
     return winner
 
 def main():
@@ -229,7 +233,7 @@ def main():
         print (f"ACTUAL: {scene.data.joint('j1').qpos[0]}, {scene.data.joint('j2').qpos[0]}, {scene.data.joint('j3').qpos[0]}, {scene.data.joint('j4').qpos[0]}, {scene.data.joint('j5').qpos[0]}, {scene.data.joint('j6').qpos[0]}")
         scene.run(1, j1, j2, j3, j4, j5, j6)
         print (f"ACTUAL: {scene.data.joint('j1').qpos[0]}, {scene.data.joint('j2').qpos[0]}, {scene.data.joint('j3').qpos[0]}, {scene.data.joint('j4').qpos[0]}, {scene.data.joint('j5').qpos[0]}, {scene.data.joint('j6').qpos[0]}")
-        input()
+        input("continue")
         scene.run(steps, j1, j2, j3, j4, j5, j6)
         print (f"ACTUAL: {scene.data.joint('j1').qpos[0]}, {scene.data.joint('j2').qpos[0]}, {scene.data.joint('j3').qpos[0]}, {scene.data.joint('j4').qpos[0]}, {scene.data.joint('j5').qpos[0]}, {scene.data.joint('j6').qpos[0]}")
         print ("ERROR:", calc_error())
@@ -237,7 +241,9 @@ def main():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--render", action="store_true")
+    parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--skip", type=int)
     args = parser.parse_args()
+    DEBUG = args.verbose
 
     main()
