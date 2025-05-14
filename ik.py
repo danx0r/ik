@@ -174,10 +174,13 @@ def calc_error():
     print ("cur:", curpos, "end:", endpt, "rot:", q**.5, "total:", err)
     return err
 
-def coords_to_angles(x, y, z, qw, qx, qy, qz):
+def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
+    if hint is not None:
+        winner = hint
+    else:
+        winner = [0, 0, 0, 0, 0, 0]
     best = 999999
     delta = 0.1
-    winner = [0, 0, 0, 0, 0, 0]
     for i in range(1000):
         ang_old = copy(winner)
         ang_new = []
@@ -197,6 +200,8 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz):
             winner = copy(ang_new)
         print (i, "WINNER:", winner, best)
         # input()
+        if err < 0.01:
+            break
         delta *= .997
     forward_kinematic(*winner)
     return winner
@@ -219,7 +224,7 @@ def main():
             qy = float(qy)
             qz = float(qz)
             scene.run(steps, j1, j2, j3, j4, j5, j6, x, y, z, qw, qx, qy, qz)
-        j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, qw, qx, qy, qz)
+        j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, qw, qx, qy, qz, hint = [j1, j2, j3, j4, j5, j6])
         print (f"IK ANGLES: {j1}, {j2}, {j3}, {j4}, {j5}, {j6}") 
         print (f"ACTUAL: {scene.data.joint('j1').qpos[0]}, {scene.data.joint('j2').qpos[0]}, {scene.data.joint('j3').qpos[0]}, {scene.data.joint('j4').qpos[0]}, {scene.data.joint('j5').qpos[0]}, {scene.data.joint('j6').qpos[0]}")
         scene.run(1, j1, j2, j3, j4, j5, j6)
