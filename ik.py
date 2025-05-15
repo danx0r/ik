@@ -3,6 +3,9 @@ import random
 import mujoco
 import numpy as np
 import glfw
+from OpenGL.GL import glReadPixels, GL_RGB, GL_UNSIGNED_BYTE
+from PIL import Image
+
 import argparse
 import time
 import sys, select
@@ -233,7 +236,16 @@ def main():
         print (f"ACTUAL: {scene.data.joint('j1').qpos[0]}, {scene.data.joint('j2').qpos[0]}, {scene.data.joint('j3').qpos[0]}, {scene.data.joint('j4').qpos[0]}, {scene.data.joint('j5').qpos[0]}, {scene.data.joint('j6').qpos[0]}")
         scene.run(1, j1, j2, j3, j4, j5, j6)
         print (f"ACTUAL: {scene.data.joint('j1').qpos[0]}, {scene.data.joint('j2').qpos[0]}, {scene.data.joint('j3').qpos[0]}, {scene.data.joint('j4').qpos[0]}, {scene.data.joint('j5').qpos[0]}, {scene.data.joint('j6').qpos[0]}")
-        input("continue")
+        if input("press 'y' to take snapshot or just <enter>").strip() == 'y':
+            width, height = glfw.get_framebuffer_size(scene.window)
+            print ("IMAGE:", width, height)
+            pixels = glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE)
+            # Create a PIL Image from the pixel data
+            image = Image.frombuffer("RGB", (width, height), pixels, "raw", "RGB", 0, 0)
+            image = image.transpose(Image.FLIP_TOP_BOTTOM)
+            # Save the image to a file
+            image.save("test.jpg")
+                    
         scene.run(steps, j1, j2, j3, j4, j5, j6)
         print (f"ACTUAL: {scene.data.joint('j1').qpos[0]}, {scene.data.joint('j2').qpos[0]}, {scene.data.joint('j3').qpos[0]}, {scene.data.joint('j4').qpos[0]}, {scene.data.joint('j5').qpos[0]}, {scene.data.joint('j6').qpos[0]}")
         print ("ERROR:", calc_error())
