@@ -206,7 +206,7 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
         if DEBUG:
             print (i, "WINNER:", winner, best)
         # input()
-        if err < 0.01:
+        if err < 0.0025:
             break
         delta *= .997
     forward_kinematic(*winner)
@@ -217,6 +217,7 @@ def main():
     global scene, j1, j2, j3, j4, j5, j6
     scene = InteractiveScene()
     j1 = j2 = j3 = j4 = j5 = j6 = x = y = z = qw = qx = qy = qz = 0
+    capscreen = 1
     while True:
         steps = 3000
         x = input("coordinates and rotation: ")
@@ -244,7 +245,8 @@ def main():
             image = Image.frombuffer("RGB", (width, height), pixels, "raw", "RGB", 0, 0)
             image = image.transpose(Image.FLIP_TOP_BOTTOM)
             # Save the image to a file
-            image.save("test.jpg")
+            image.save(f"ikcap{capscreen:03}.jpg")
+            capscreen += 1
                     
         scene.run(steps, j1, j2, j3, j4, j5, j6)
         print (f"ACTUAL: {scene.data.joint('j1').qpos[0]}, {scene.data.joint('j2').qpos[0]}, {scene.data.joint('j3').qpos[0]}, {scene.data.joint('j4').qpos[0]}, {scene.data.joint('j5').qpos[0]}, {scene.data.joint('j6').qpos[0]}")
