@@ -185,7 +185,7 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
     else:
         winner = [0, 0, 0, 0, 0, 0]
     best = 999999
-    delta = 0.1
+    delta = 0.05
     for i in range(1000):
         ang_old = copy(winner)
         ang_new = []
@@ -208,7 +208,10 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
         # input()
         if err < 0.0025:
             break
-        delta *= .997
+        if delta > 0.004:
+            delta *= .994
+        else:
+            delta *= .998
     forward_kinematic(*winner)
     print ("STEPS:", i)
     return winner

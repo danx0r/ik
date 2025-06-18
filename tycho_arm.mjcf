@@ -32,17 +32,17 @@
                 <body name="C" pos="0 0.04 0.11">
                     <geom type="capsule" size="0.022" fromto="0 0 0 0 0 0.1" rgba="0.7 0.7 0.7 1"/>
                     <geom type="cylinder" size="0.0221" fromto="0 0 0 0 -.04 0" rgba="0.7 0.7 0.7 1"/>
-                    <joint name="j3" type="hinge" range="-165 165" axis="0 1 0"/>
+                    <joint name="j3" type="hinge" range="15 165" axis="0 1 0"/>
                     <body name="D" pos="0 -.04 0.1">
                         <joint name="j4" type="hinge" range="-165 165" axis="0 1 0"/>
                         <geom type="capsule" size="0.022" fromto="0 0 0 0 0 0.07" rgba="0.7 0.7 0.7 .51"/>
                         <geom type="cylinder" size="0.0221" fromto="0 0 0 0 0.04 0" rgba="0.7 0.7 0.7 .51"/>
                         <body name="E" pos="0 0 0.07">
                             <joint name="j5" type="hinge" range="-165 165" axis="0 0 1"/>
-                            <geom type="capsule" size="0.012" fromto="0 0 0 -.02 0 0" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 .51"/>
+                            <geom type="capsule" size="0.012" fromto="0 0 0 .02 0 0" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 .51"/>
                             <body name="F" pos="0 0 0">
                                 <joint name="j6" type="hinge" range="-180 180" axis="1 0 0"/>
-                                <body name="endpt" pos="-.05 0 0">
+                                <body name="endpt" pos=".05 0 0" xyaxes="-1 0 0 0 -1 0">
                                     <geom type="sphere" size="0.01" contype="0" conaffinity="0" rgba="0.4 .4 .4 .7"/>
                                     <geom type="capsule" size="0.0035" fromto="0 0 0  .05 0 0" contype="0" conaffinity="0" mass="1" rgba="1 0 0 1"/>
                                     <geom type="capsule" size="0.0035" fromto="0 0 0  0 .05 0" contype="0" conaffinity="0" mass="1" rgba="0 1 0 1"/>
