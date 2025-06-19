@@ -2,7 +2,8 @@ import numpy as np
 import pinocchio
 from numpy.linalg import norm, solve
 
-model = pinocchio.buildSampleModelManipulator()
+# model = pinocchio.buildSampleModelManipulator()
+model = pinocchio.buildModelFromMJCF("tycho_arm.mjcf")
 data = model.createData()
 
 JOINT_ID = 6
