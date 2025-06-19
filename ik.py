@@ -190,12 +190,16 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
         ang_old = copy(winner)
         ang_new = []
         maxx = 2.875
+        minn = -maxx
         for j in range(6):
             ang_new.append(ang_old[j] + (random.gauss(0, delta)))
+            if j == 2:
+                minn = 0
             if j == 5:
                 maxx = 3.14
-            if ang_new[j] < -maxx:
-                ang_new[j] = -maxx
+                minn = -maxx
+            if ang_new[j] < minn:
+                ang_new[j] =  minn
             if ang_new[j] > maxx:
                 ang_new[j] = maxx
         forward_kinematic(*ang_new)

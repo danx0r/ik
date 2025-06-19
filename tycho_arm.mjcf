@@ -7,6 +7,8 @@
     </visual>
 
     <worldbody>
+        <geom type="capsule" size="0.0015" fromto="0 0 0  .5 0 0" contype="0" conaffinity="0" mass=".001" rgba="1 0 0 1"/>
+        <geom type="capsule" size="0.0015" fromto="0 0 0  0 .5 0" contype="0" conaffinity="0" mass=".001" rgba="0 1 0 1"/>
         <light cutoff="100" ambient=".3 .3 .3" diffuse="1 1 1" specular=".8 .8 .8" directional="false" pos="5 -3 7" castshadow="false"/>
         <light cutoff="100" ambient=".2 .2 .2" diffuse=".6 .6 .6" specular=".7 .7 .7" directional="false" pos="-3 -7 4" castshadow="false"/>
 
@@ -24,7 +26,7 @@
             <body name="B" pos="0 -.05 .26">
                 <geom type="capsule" size="0.022" fromto="0 0 0 0 0 0.11" rgba="0.7 0.7 0.7 1"/>
                 <geom type="cylinder" size="0.0221" fromto="0 0 0 0 0.04 0" rgba="0.7 0.7 0.7 1"/>
-                <joint name="j2" type="hinge" range="-165 165" axis="0 1 0"/>
+                <joint name="j2" type="hinge" range="-15 165" axis="0 1 0"/>
                 <body name="C" pos="0 0.04 0.11">
                     <geom type="capsule" size="0.022" fromto="0 0 0 0 0 0.1" rgba="0.7 0.7 0.7 1"/>
                     <geom type="cylinder" size="0.0221" fromto="0 0 0 0 -.04 0" rgba="0.7 0.7 0.7 1"/>
