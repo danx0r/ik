@@ -194,8 +194,8 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
         minn = -maxx
         for j in range(6):
             ang_new.append(ang_old[j] + (random.gauss(0, delta)))
-            if j == 1:
-                minn = 0
+            # if j == 1:
+            #     minn = 0
             if j == 2:
                 minn = 0
             if j == 5:
