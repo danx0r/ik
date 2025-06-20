@@ -209,12 +209,21 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
         # Calculate position error
         pos_error = target_pos - current_pos
         
-        # Calculate orientation error (simplified)
-        quat_error = target_quat - current_quat
+        # Calculate orientation error using quaternion logarithm
+        # Normalize quaternions first
+        target_quat_norm = target_quat / np.linalg.norm(target_quat)
+        current_quat_norm = current_quat / np.linalg.norm(current_quat)
         
-        # Combine errors (focus mainly on position for now)
-        error = pos_error  # Use only position error for simplicity
+        # Calculate quaternion error (vector part difference)
+        quat_error = target_quat_norm - current_quat_norm
+        rot_error = quat_error[1:4]  # Use xyz components
+        
+        # Combine position and orientation errors
+        error = np.concatenate([pos_error, rot_error])
         error_norm = np.linalg.norm(error)
+        
+        if DEBUG:
+            print(f"Iter {iteration}: pos_err={np.linalg.norm(pos_error):.4f}, rot_err={np.linalg.norm(rot_error):.4f}")
         
         if error_norm < tolerance:
             break
@@ -225,8 +234,8 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
         
         mujoco.mj_jacBody(scene.model, scene.data, jacp, jacr, endpt_id)
         
-        # Use only position Jacobian and first 6 joints
-        jac = jacp[:, :6]  # 3x6 matrix for position only
+        # Combine position and rotation Jacobians, use first 6 joints
+        jac = np.vstack([jacp[:, :6], jacr[:, :6]])  # 6x6 matrix for position and orientation
         
         # Compute pseudo-inverse and update
         try:
