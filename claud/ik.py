@@ -180,51 +180,89 @@ def calc_error():
     return err
 
 def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
+    # Set initial joint angles from hint or defaults
     if hint is not None:
-        winner = hint
+        scene.data.qpos[:6] = hint
     else:
-        winner = [0, 0, 0, 0, 0, 0]
-    best = 999999
-    delta = 0.05
-    del2 = 1
-    for i in range(1000):
-        ang_old = copy(winner)
-        ang_new = []
-        maxx = 2.875
-        minn = -maxx
-        for j in range(6):
-            ang_new.append(ang_old[j] + (random.gauss(0, delta)))
-            # if j == 1:
-            #     minn = 0
-            if j == 2:
-                minn = 0
-            if j == 5:
-                maxx = 3.14
-                minn = -maxx
-            if ang_new[j] < minn:
-                ang_new[j] =  minn
-            if ang_new[j] > maxx:
-                ang_new[j] = maxx
-        forward_kinematic(*ang_new)
-        err = calc_error()
-        if err < best:
-            best = err
-            winner = copy(ang_new)
-        if DEBUG:
-            print (i, "WINNER:", winner, best)
-        # input()
-        print ("ERROR:", err)
-        if err < 0.01:
+        scene.data.qpos[:6] = [0, 0, 0, 0, 0, 0]
+    
+    # Set target position and orientation
+    target_pos = np.array([x, y, z])
+    target_quat = np.array([qw, qx, qy, qz])
+    
+    # Get the end effector body ID and site ID (if exists)
+    endpt_id = scene.model.body("endpt").id
+    
+    # Try to find a site associated with the end effector for IK
+    site_id = None
+    for i in range(scene.model.nsite):
+        if scene.model.site(i).bodyid == endpt_id:
+            site_id = i
             break
-        # if delta > 0.004:
-        #     delta *= .994
-        # else:
-        #     delta *= .998
-        delta = err * del2
-        del2 *= .997
-    forward_kinematic(*winner)
-    print ("STEPS:", i)
-    return winner
+    
+    # Use Jacobian-based IK manually
+    max_iterations = 100
+    tolerance = 0.01
+    step_size = 0.1
+    
+    for iteration in range(max_iterations):
+        # Forward kinematics
+        mujoco.mj_forward(scene.model, scene.data)
+        
+        # Get current end effector pose
+        current_pos = scene.data.body(endpt_id).xpos.copy()
+        current_quat = scene.data.body(endpt_id).xquat.copy()
+        
+        # Calculate position error
+        pos_error = target_pos - current_pos
+        
+        # Calculate orientation error (simplified)
+        quat_error = target_quat - current_quat
+        
+        # Combine errors (focus mainly on position for now)
+        error = pos_error  # Use only position error for simplicity
+        error_norm = np.linalg.norm(error)
+        
+        if error_norm < tolerance:
+            break
+            
+        # Compute Jacobian for the body
+        jacp = np.zeros((3, scene.model.nv))  # position Jacobian
+        jacr = np.zeros((3, scene.model.nv))  # rotation Jacobian
+        
+        mujoco.mj_jacBody(scene.model, scene.data, jacp, jacr, endpt_id)
+        
+        # Use only position Jacobian and first 6 joints
+        jac = jacp[:, :6]  # 3x6 matrix for position only
+        
+        # Compute pseudo-inverse and update
+        try:
+            jac_pinv = np.linalg.pinv(jac)
+            dq = step_size * jac_pinv @ error
+            
+            # Update joint positions (only first 6 DOF)
+            scene.data.qpos[:6] += dq
+            
+            # Apply joint limits
+            for i in range(6):
+                joint_range = scene.model.joint(i).range
+                if joint_range[0] != joint_range[1]:  # joint has limits
+                    scene.data.qpos[i] = np.clip(scene.data.qpos[i], joint_range[0], joint_range[1])
+                    
+        except np.linalg.LinAlgError:
+            break
+    
+    # Extract joint angles
+    joint_angles = scene.data.qpos[:6].copy()
+    
+    # Apply the solution
+    forward_kinematic(*joint_angles)
+    
+    if DEBUG:
+        print(f"Joint angles: {joint_angles}")
+        print(f"Error: {calc_error()}")
+    
+    return joint_angles
 
 def main():
     global scene, j1, j2, j3, j4, j5, j6
@@ -233,9 +271,9 @@ def main():
     capscreen = 1
     while True:
         steps = 3000
-        x = input("coordinates and rotation: ")
-        if x:
-            inp = x.strip().split()
+        user_input = input("coordinates and rotation: ")
+        if user_input:
+            inp = user_input.strip().split()
             x, y, z, qw, qx, qy, qz = inp
             x = float(x)
             y = float(y)
