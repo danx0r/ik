@@ -209,14 +209,13 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
         # Calculate position error
         pos_error = target_pos - current_pos
         
-        # Calculate orientation error using quaternion logarithm
+        # Calculate orientation error (simple approach)
         # Normalize quaternions first
         target_quat_norm = target_quat / np.linalg.norm(target_quat)
         current_quat_norm = current_quat / np.linalg.norm(current_quat)
         
-        # Calculate quaternion error (vector part difference)
-        quat_error = target_quat_norm - current_quat_norm
-        rot_error = quat_error[1:4]  # Use xyz components
+        # Simple quaternion error - just the vector part scaled down
+        rot_error = (target_quat_norm[1:4] - current_quat_norm[1:4]) * 0.5
         
         # Combine position and orientation errors
         error = np.concatenate([pos_error, rot_error])
