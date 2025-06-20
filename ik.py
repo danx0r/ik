@@ -193,6 +193,8 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
         minn = -maxx
         for j in range(6):
             ang_new.append(ang_old[j] + (random.gauss(0, delta)))
+            if j == 1:
+                minn = 0
             if j == 2:
                 minn = 0
             if j == 5:
@@ -210,12 +212,13 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
         if DEBUG:
             print (i, "WINNER:", winner, best)
         # input()
-        if err < 0.0025:
+        if err < 0.005:
             break
-        if delta > 0.004:
-            delta *= .994
-        else:
-            delta *= .998
+        # if delta > 0.004:
+        #     delta *= .994
+        # else:
+        #     delta *= .998
+        delta = err * .5
     forward_kinematic(*winner)
     print ("STEPS:", i)
     return winner
