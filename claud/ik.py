@@ -190,15 +190,8 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
     target_pos = np.array([x, y, z])
     target_quat = np.array([qw, qx, qy, qz])
     
-    # Get the end effector body ID and site ID (if exists)
+    # Get the end effector body ID
     endpt_id = scene.model.body("endpt").id
-    
-    # Try to find a site associated with the end effector for IK
-    site_id = None
-    for i in range(scene.model.nsite):
-        if scene.model.site(i).bodyid == endpt_id:
-            site_id = i
-            break
     
     # Use Jacobian-based IK manually
     max_iterations = 100
