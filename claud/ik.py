@@ -194,8 +194,8 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
     endpt_id = scene.model.body("endpt").id
     
     # Use Jacobian-based IK manually
-    max_iterations = 100
-    tolerance = 0.01
+    max_iterations = 1000
+    tolerance = 0.0001
     step_size = 0.1
     
     for iteration in range(max_iterations):
@@ -215,10 +215,12 @@ def coords_to_angles(x, y, z, qw, qx, qy, qz, hint=None):
         current_quat_norm = current_quat / np.linalg.norm(current_quat)
         
         # Simple quaternion error - just the vector part scaled down
-        rot_error = (target_quat_norm[1:4] - current_quat_norm[1:4]) * 0.5
+        rot_error = (target_quat_norm[1:4] - current_quat_norm[1:4])
         
         # Combine position and orientation errors
+        pos_error *= 0.5
         error = np.concatenate([pos_error, rot_error])
+
         error_norm = np.linalg.norm(error)
         
         if DEBUG:
