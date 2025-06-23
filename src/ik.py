@@ -10,7 +10,7 @@ RAD2DEG=57.2958
 MAXDIST = 2
 LINK_LENGTH = 0.8
 
-f = open("claude3d.xml")
+f = open("simple_arm.mjcf")
 MODEL_XML = f.read()
 f.close()
 
