@@ -8,6 +8,7 @@ import sys, select
 
 RAD2DEG=57.2958
 MAXDIST = 2
+LINK_LENGTH = 0.8
 
 f = open("claude3d.xml")
 MODEL_XML = f.read()
@@ -178,6 +179,10 @@ class InteractiveScene:
                 time.sleep(0.001)
 
 def coords_to_angles(x, y, z):
+    x /= LINK_LENGTH
+    y /= LINK_LENGTH
+    z /= LINK_LENGTH
+    
     xy = (x**2 + y**2) ** 0.5
     xyz = (x**2 + y**2 + z**2) ** 0.5
     if xy==0:
