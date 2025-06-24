@@ -178,25 +178,66 @@ class InteractiveScene:
                 glfw.poll_events()
                 time.sleep(0.001)
 
-def coords_to_angles(x, y, z):
-    x /= LINK_LENGTH
-    y /= LINK_LENGTH
-    z /= LINK_LENGTH
+def coords_to_angles(x, y, z, link1_length=LINK_LENGTH, link2_length=LINK_LENGTH):
+    """
+    Inverse kinematics for 3DOF arm with variable link lengths
     
+    Args:
+        x, y, z: Target position coordinates
+        link1_length: Length of first link segment
+        link2_length: Length of second link segment
+    
+    Returns:
+        yaw, pitch, elbow_angle: Joint angles in degrees
+    """
+    # Calculate total reach and normalize coordinates
+    max_reach = link1_length + link2_length
+    
+    # Calculate distances
     xy = (x**2 + y**2) ** 0.5
     xyz = (x**2 + y**2 + z**2) ** 0.5
-    if xy==0:
+    
+    # Prevent division by zero
+    if xy == 0:
         xy = 0.0000001
-    if xyz==0:
-        xyz = 0.0000001 #OH yes I did
-    yaw = math.acos(x/xy) * RAD2DEG
+    if xyz == 0:
+        xyz = 0.0000001
+    
+    # Calculate yaw (rotation around Z axis)
+    yaw = math.acos(min(1, abs(x)/xy)) * 180/math.pi  # RAD2DEG
+    if x < 0:
+        yaw = 180 - yaw
     if y < 0:
         yaw = -yaw
-    pitch = math.acos(xy/xyz) * RAD2DEG
+    
+    # Calculate pitch component
+    pitch_base = math.acos(min(1, xy/xyz)) * 180/math.pi
     if z < 0:
-        pitch = -pitch
-    ang = math.acos(min(1, (xyz/MAXDIST))) * RAD2DEG
-    return yaw, pitch+ang, -2*ang
+        pitch_base = -pitch_base
+    
+    # Calculate elbow angle using law of cosines
+    # Check if target is reachable
+    if xyz > max_reach:
+        # Target unreachable - extend arm fully toward target
+        elbow_angle = 0  # Fully extended
+        pitch = pitch_base
+    else:
+        # Use law of cosines to find elbow angle
+        # cos(elbow_angle) = (link1² + link2² - distance²) / (2 * link1 * link2)
+        cos_elbow = (link1_length**2 + link2_length**2 - xyz**2) / (2 * link1_length * link2_length)
+        cos_elbow = max(-1, min(1, cos_elbow))  # Clamp to valid range
+        elbow_angle = math.acos(cos_elbow) * 180/math.pi
+        elbow_angle = 180 - elbow_angle  # Convert to joint angle convention
+        
+        # Calculate shoulder pitch adjustment
+        # Using law of cosines to find angle between link1 and target vector
+        cos_shoulder = (link1_length**2 + xyz**2 - link2_length**2) / (2 * link1_length * xyz)
+        cos_shoulder = max(-1, min(1, cos_shoulder))
+        shoulder_adjustment = math.acos(cos_shoulder) * 180/math.pi
+        
+        pitch = pitch_base + shoulder_adjustment
+    
+    return yaw, pitch, -elbow_angle
 
 def calc_error():
     endpt = scene.data.body("endpt").xpos
