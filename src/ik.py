@@ -129,7 +129,7 @@ class InteractiveScene:
                 self.cam.lookat[1] = 0
                 self.cam.lookat[2] = 0
 
-    def run(self, steps=999999, j1=None, j2=None, j3=None, x=None, y=None, z=None, p=None, render=True):
+    def run(self, steps=999999, j1=None, j2=None, j3=None, x=None, y=None, z=None, render=True):
         # self.data.actuator('j4').ctrl[0] = 1.57
         while steps > 0 and not glfw.window_should_close(self.window):
             if kbhit():
@@ -144,8 +144,8 @@ class InteractiveScene:
                 self.data.actuator('cursor_y').ctrl[0] = y
             if z is not None:
                 self.data.actuator('cursor_z').ctrl[0] = z
-            if p is not None:
-                self.data.actuator('cursor_p').ctrl[0] = p
+            # if p is not None:
+            #     self.data.actuator('cursor_p').ctrl[0] = p
             # if w is not None:
             #     self.data.actuator('cursor_w').ctrl[0] = w
             # if r is not None:
@@ -216,14 +216,14 @@ def main():
         x = input("coordinates and rotation: ")
         if x:
             inp = x.strip().split()
-            x, y, z, p = inp
+            x, y, z = inp
             x = float(x)
             y = float(y)
             z = float(z)
-            p = float(p)/RAD2DEG #pitch
+            # p = float(p)/RAD2DEG #pitch
             # w = float(w)/RAD2DEG #yaW; y was already taken
             # r = float(r)/RAD2DEG #roll
-            scene.run(steps/2, j1, j2, j3, x, y, z, p)
+            scene.run(steps/2, j1, j2, j3, x, y, z)
 
             j1, j2, j3 = coords_to_angles(x, y, z)
             print (f"ANGLES: {j1}, {j2}, {j3}")
