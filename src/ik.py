@@ -8,7 +8,8 @@ import sys, select
 
 RAD2DEG=57.2958
 MAXDIST = 2
-LINK_LENGTH = 0.8
+LINK_LENGTH1 = 1
+LINK_LENGTH2 = 0.8
 
 f = open("simple_arm.mjcf")
 MODEL_XML = f.read()
@@ -178,7 +179,7 @@ class InteractiveScene:
                 glfw.poll_events()
                 time.sleep(0.001)
 
-def coords_to_angles(x, y, z, link1_length=LINK_LENGTH, link2_length=LINK_LENGTH):
+def coords_to_angles(x, y, z, link1_length=LINK_LENGTH1, link2_length=LINK_LENGTH2):
     """
     Inverse kinematics for 3DOF arm with variable link lengths
     
