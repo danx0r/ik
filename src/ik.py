@@ -130,8 +130,8 @@ class InteractiveScene:
                 self.cam.lookat[1] = 0
                 self.cam.lookat[2] = 0
 
-    def run(self, steps=999999, j1=None, j2=None, j3=None, x=None, y=None, z=None, render=True):
-        self.data.actuator('j4').ctrl[0] = 1.57/2
+    def run(self, steps=999999, j1=None, j2=None, j3=None, j4=None, x=None, y=None, z=None, render=True):
+        # self.data.actuator('j4').ctrl[0] = 1.57/2
         while steps > 0 and not glfw.window_should_close(self.window):
             if kbhit():
                 input()
@@ -158,6 +158,8 @@ class InteractiveScene:
                 self.data.actuator('j2').ctrl[0] = j2
             if j3 is not None:
                 self.data.actuator('j3').ctrl[0] = j3
+            if j4 is not None:
+                self.data.actuator('j4').ctrl[0] = j4
 
             while (self.data.time - time_prev < 1.0/60.0):
                 mujoco.mj_step(self.model, self.data)
@@ -238,7 +240,7 @@ def coords_to_angles(x, y, z, link1_length=LINK_LENGTH1, link2_length=LINK_LENGT
         
         pitch = pitch_base + shoulder_adjustment
     
-    return yaw, pitch, -elbow_angle
+    return yaw, pitch, -elbow_angle, 45
 
 def calc_error():
     endpt = scene.data.body("endpt").xpos
@@ -252,7 +254,7 @@ def calc_error():
 def main():
     global scene
     scene = InteractiveScene()
-    j1 = j2 = j3 = x = y = z = 0
+    j1 = j2 = j3 = j4 = x = y = z = 0
     while True:
         steps = 3000000
         x = input("coordinates and rotation: ")
@@ -265,15 +267,16 @@ def main():
             # p = float(p)/RAD2DEG #pitch
             # w = float(w)/RAD2DEG #yaW; y was already taken
             # r = float(r)/RAD2DEG #roll
-            scene.run(steps/2, j1, j2, j3, x, y, z)
+            scene.run(steps/2, j1, j2, j3, j4, x, y, z)
 
-            j1, j2, j3 = coords_to_angles(x, y, z)
-            print (f"ANGLES: {j1}, {j2}, {j3}")
+            j1, j2, j3, j4 = coords_to_angles(x, y, z)
+            print (f"ANGLES: {j1}, {j2}, {j3}, {j4}")
             j1 = float(j1)/RAD2DEG
             j2 = float(j2)/RAD2DEG
             j3 = float(j3)/RAD2DEG
+            j4 = float(j4)/RAD2DEG
 
-        scene.run(steps, j1, j2, j3, x, y, z)
+        scene.run(steps, j1, j2, j3, j4, x, y, z)
         print ("ERROR:", calc_error())
 
 if __name__ == "__main__":
