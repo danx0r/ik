@@ -131,7 +131,7 @@ class InteractiveScene:
                 self.cam.lookat[2] = 0
 
     def run(self, steps=999999, j1=None, j2=None, j3=None, x=None, y=None, z=None, render=True):
-        # self.data.actuator('j4').ctrl[0] = 1.57
+        self.data.actuator('j4').ctrl[0] = 1.57/2
         while steps > 0 and not glfw.window_should_close(self.window):
             if kbhit():
                 input()
