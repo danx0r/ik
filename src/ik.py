@@ -161,6 +161,8 @@ class InteractiveScene:
                 self.data.actuator('j4').ctrl[0] = j4
             if j5 is not None:
                 self.data.actuator('j5').ctrl[0] = j5
+            if j6 is not None:
+                self.data.actuator('j6').ctrl[0] = j6
 
             while (self.data.time - time_prev < 1.0/60.0):
                 mujoco.mj_step(self.model, self.data)
@@ -184,7 +186,7 @@ class InteractiveScene:
 
 def coords_to_angles(x, y, z, p, w=0, r=0, link1_length=LINK_LENGTH1, link2_length=LINK_LENGTH2):
     """
-    Inverse kinematics for 5DOF arm with variable link lengths
+    Inverse kinematics for 6DOF arm with variable link lengths
     
     Args:
         x, y, z: Target position coordinates
@@ -195,7 +197,7 @@ def coords_to_angles(x, y, z, p, w=0, r=0, link1_length=LINK_LENGTH1, link2_leng
         link2_length: Length of second link segment
     
     Returns:
-        j1, j2, j3, j4, j5: Joint angles in degrees
+        j1, j2, j3, j4, j5, j6: Joint angles in degrees
     """
     # Calculate total reach and normalize coordinates
     max_reach = link1_length + link2_length
@@ -241,15 +243,32 @@ def coords_to_angles(x, y, z, p, w=0, r=0, link1_length=LINK_LENGTH1, link2_leng
         beta = math.acos(cos_shoulder)
         j2 = (alpha + beta) * RAD2DEG
     
-    # J4, J5: End effector orientation (only 5 joints available)
-    # These joints control the orientation of the end effector
-    # J4: Wrist pitch (around Y axis) - combines pitch and yaw influence
-    j4 = p * RAD2DEG + w * RAD2DEG * 0.5  # Blend pitch and yaw
+    # J4, J5, J6: End effector orientation (now true 6-DOF)
+    # 
+    # Kinematic analysis:
+    # - End-effector pitch = j2 + j3 + j4 (all rotations around -Y axis)
+    # - End-effector roll = j5 (rotation around X axis)  
+    # - End-effector yaw = j1 + j6 (j1 global, j6 local)
+    #
+    # For desired end-effector orientation (p, r, w):
+    # - Pitch: j2 + j3 + j4 = p  =>  j4 = p - (j2 + j3)
+    # - Roll: j5 = r
+    # - Yaw: j1 + j6 = w  =>  j6 = w - j1 (but j1 is set by position)
     
-    # J5: Wrist roll (around X axis)
+    # J4: Wrist pitch - compensate for arm pitch angles  
+    # In the actual robot: end_effector_pitch = j2 + (returned_j3) + j4
+    # Since we return -j3, the actual equation is: end_effector_pitch = j2 + (-j3) + j4
+    # We want: j2 + (-j3) + j4 = p * RAD2DEG
+    # Therefore: j4 = p * RAD2DEG - j2 - (-j3) = p * RAD2DEG - j2 + j3
+    j4 = p * RAD2DEG - j2 + j3
+    
+    # J5: Wrist roll - direct mapping
     j5 = r * RAD2DEG
     
-    return j1, j2, -j3, j4, j5
+    # J6: Wrist yaw - compensate for base rotation  
+    j6 = w * RAD2DEG - j1
+    
+    return j1, j2, -j3, j4, j5, j6
 
 def calc_error():
     endpt = scene.data.body("endpt").xpos
@@ -263,7 +282,7 @@ def calc_error():
 def main():
     global scene
     scene = InteractiveScene()
-    j1 = j2 = j3 = j4 = j5 = x = y = z = w = r = 0
+    j1 = j2 = j3 = j4 = j5 = j6 = x = y = z = w = r = 0
     while True:
         steps = 3000000
         x = input("coordinates and rotation (x y z p w r): ")
@@ -280,17 +299,18 @@ def main():
                 p = float(p)/RAD2DEG #cursor pitch
                 w = float(w)/RAD2DEG #cursor yaw
                 r = float(r)/RAD2DEG #cursor roll
-                scene.run(steps/2, j1, j2, j3, j4, j5, x=x, y=y, z=z, p=p, w=w, r=r)
+                scene.run(steps/2, j1, j2, j3, j4, j5, j6, x=x, y=y, z=z, p=p, w=w, r=r)
 
-                j1, j2, j3, j4, j5 = coords_to_angles(x, y, z, p, w, r)
-                print (f"ANGLES: {j1}, {j2}, {j3}, {j4}, {j5}")
+                j1, j2, j3, j4, j5, j6 = coords_to_angles(x, y, z, p, w, r)
+                print (f"ANGLES: {j1}, {j2}, {j3}, {j4}, {j5}, {j6}")
                 j1 = float(j1)/RAD2DEG
                 j2 = float(j2)/RAD2DEG
                 j3 = float(j3)/RAD2DEG
                 j4 = float(j4)/RAD2DEG
                 j5 = float(j5)/RAD2DEG
+                j6 = float(j6)/RAD2DEG
 
-        scene.run(steps, j1, j2, j3, j4, j5)
+        scene.run(steps, j1, j2, j3, j4, j5, j6)
         print ("ERROR:", calc_error())
 
 if __name__ == "__main__":
