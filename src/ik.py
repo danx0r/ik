@@ -130,7 +130,7 @@ class InteractiveScene:
                 self.cam.lookat[1] = 0
                 self.cam.lookat[2] = 0
 
-    def run(self, steps=999999, j1=None, j2=None, j3=None, j4=None, x=None, y=None, z=None, p=None, render=True):
+    def run(self, steps=999999, j1=None, j2=None, j3=None, j4=None, j5=None, j6=None, x=None, y=None, z=None, p=None, w=None, r=None, render=True):
         while steps > 0 and not glfw.window_should_close(self.window):
             if kbhit():
                 input()
@@ -146,10 +146,10 @@ class InteractiveScene:
                 self.data.actuator('cursor_z').ctrl[0] = z
             if p is not None:
                 self.data.actuator('cursor_p').ctrl[0] = p
-            # if w is not None:
-            #     self.data.actuator('cursor_w').ctrl[0] = w
-            # if r is not None:
-            #     self.data.actuator('cursor_r').ctrl[0] = r
+            if w is not None:
+                self.data.actuator('cursor_w').ctrl[0] = w
+            if r is not None:
+                self.data.actuator('cursor_r').ctrl[0] = r
 
             if j1 is not None:
                 self.data.actuator('j1').ctrl[0] = j1
@@ -159,6 +159,8 @@ class InteractiveScene:
                 self.data.actuator('j3').ctrl[0] = j3
             if j4 is not None:
                 self.data.actuator('j4').ctrl[0] = j4
+            if j5 is not None:
+                self.data.actuator('j5').ctrl[0] = j5
 
             while (self.data.time - time_prev < 1.0/60.0):
                 mujoco.mj_step(self.model, self.data)
@@ -180,17 +182,20 @@ class InteractiveScene:
                 glfw.poll_events()
                 time.sleep(0.001)
 
-def coords_to_angles(x, y, z, p, link1_length=LINK_LENGTH1, link2_length=LINK_LENGTH2):
+def coords_to_angles(x, y, z, p, w=0, r=0, link1_length=LINK_LENGTH1, link2_length=LINK_LENGTH2):
     """
-    Inverse kinematics for 3DOF arm with variable link lengths
+    Inverse kinematics for 5DOF arm with variable link lengths
     
     Args:
         x, y, z: Target position coordinates
+        p: Pitch angle of end effector (radians)
+        w: Yaw angle of end effector (radians) 
+        r: Roll angle of end effector (radians)
         link1_length: Length of first link segment
         link2_length: Length of second link segment
     
     Returns:
-        yaw, pitch, elbow_angle: Joint angles in degrees
+        j1, j2, j3, j4, j5: Joint angles in degrees
     """
     # Calculate total reach and normalize coordinates
     max_reach = link1_length + link2_length
@@ -205,41 +210,46 @@ def coords_to_angles(x, y, z, p, link1_length=LINK_LENGTH1, link2_length=LINK_LE
     if xyz == 0:
         xyz = 0.0000001
     
-    # Calculate yaw (rotation around Z axis)
-    yaw = math.acos(min(1, abs(x)/xy)) * 180/math.pi  # RAD2DEG
-    if x < 0:
-        yaw = 180 - yaw
-    if y < 0:
-        yaw = -yaw
+    # J1: Base rotation (yaw) - rotation around Z axis
+    j1 = math.atan2(y, x) * RAD2DEG
     
-    # Calculate pitch component
-    pitch_base = math.acos(min(1, xy/xyz)) * 180/math.pi
-    if z < 0:
-        pitch_base = -pitch_base
+    # Calculate position for the wrist center (subtract end effector offset)
+    # Assuming the end effector extends some distance from the wrist
+    # For now, we'll position the wrist at the target position
+    wrist_x, wrist_y, wrist_z = x, y, z
+    wrist_dist = (wrist_x**2 + wrist_y**2 + wrist_z**2) ** 0.5
+    wrist_xy = (wrist_x**2 + wrist_y**2) ** 0.5
     
-    # Calculate elbow angle using law of cosines
     # Check if target is reachable
-    if xyz > max_reach:
+    if wrist_dist > max_reach:
         # Target unreachable - extend arm fully toward target
-        elbow_angle = 0  # Fully extended
-        pitch = pitch_base
+        j3 = 0  # Fully extended elbow
+        j2 = math.atan2(wrist_z, wrist_xy) * RAD2DEG
     else:
-        # Use law of cosines to find elbow angle
-        # cos(elbow_angle) = (link1² + link2² - distance²) / (2 * link1 * link2)
-        cos_elbow = (link1_length**2 + link2_length**2 - xyz**2) / (2 * link1_length * link2_length)
+        # J3: Elbow angle using law of cosines
+        cos_elbow = (link1_length**2 + link2_length**2 - wrist_dist**2) / (2 * link1_length * link2_length)
         cos_elbow = max(-1, min(1, cos_elbow))  # Clamp to valid range
-        elbow_angle = math.acos(cos_elbow) * 180/math.pi
-        elbow_angle = 180 - elbow_angle  # Convert to joint angle convention
+        j3 = math.acos(cos_elbow) * RAD2DEG
+        j3 = 180 - j3  # Convert to joint angle convention
         
-        # Calculate shoulder pitch adjustment
-        # Using law of cosines to find angle between link1 and target vector
-        cos_shoulder = (link1_length**2 + xyz**2 - link2_length**2) / (2 * link1_length * xyz)
+        # J2: Shoulder pitch
+        # Calculate angle from horizontal to target
+        alpha = math.atan2(wrist_z, wrist_xy)
+        # Calculate angle from link1 to target using law of cosines
+        cos_shoulder = (link1_length**2 + wrist_dist**2 - link2_length**2) / (2 * link1_length * wrist_dist)
         cos_shoulder = max(-1, min(1, cos_shoulder))
-        shoulder_adjustment = math.acos(cos_shoulder) * 180/math.pi
-        
-        pitch = pitch_base + shoulder_adjustment
+        beta = math.acos(cos_shoulder)
+        j2 = (alpha + beta) * RAD2DEG
     
-    return yaw, pitch, -elbow_angle, p*RAD2DEG + elbow_angle - pitch
+    # J4, J5: End effector orientation (only 5 joints available)
+    # These joints control the orientation of the end effector
+    # J4: Wrist pitch (around Y axis) - combines pitch and yaw influence
+    j4 = p * RAD2DEG + w * RAD2DEG * 0.5  # Blend pitch and yaw
+    
+    # J5: Wrist roll (around X axis)
+    j5 = r * RAD2DEG
+    
+    return j1, j2, -j3, j4, j5
 
 def calc_error():
     endpt = scene.data.body("endpt").xpos
@@ -253,29 +263,34 @@ def calc_error():
 def main():
     global scene
     scene = InteractiveScene()
-    j1 = j2 = j3 = j4 = x = y = z = 0
+    j1 = j2 = j3 = j4 = j5 = x = y = z = w = r = 0
     while True:
         steps = 3000000
-        x = input("coordinates and rotation: ")
+        x = input("coordinates and rotation (x y z p w r): ")
         if x:
             inp = x.strip().split()
-            x, y, z, p = inp
-            x = float(x)
-            y = float(y)
-            z = float(z)
-            p = float(p)/RAD2DEG #cursor pitch
-            # w = float(w)/RAD2DEG #yaW; y was already taken
-            # r = float(r)/RAD2DEG #roll
-            scene.run(steps/2, j1, j2, j3, j4, x, y, z, p)
+            if len(inp) >= 4:
+                x, y, z, p = inp[0], inp[1], inp[2], inp[3]
+                w = inp[4] if len(inp) > 4 else '0'
+                r = inp[5] if len(inp) > 5 else '0'
+                
+                x = float(x)
+                y = float(y)
+                z = float(z)
+                p = float(p)/RAD2DEG #cursor pitch
+                w = float(w)/RAD2DEG #cursor yaw
+                r = float(r)/RAD2DEG #cursor roll
+                scene.run(steps/2, j1, j2, j3, j4, j5, x=x, y=y, z=z, p=p, w=w, r=r)
 
-            j1, j2, j3, j4 = coords_to_angles(x, y, z, p)
-            print (f"ANGLES: {j1}, {j2}, {j3}, {j4}")
-            j1 = float(j1)/RAD2DEG
-            j2 = float(j2)/RAD2DEG
-            j3 = float(j3)/RAD2DEG
-            j4 = float(j4)/RAD2DEG
+                j1, j2, j3, j4, j5 = coords_to_angles(x, y, z, p, w, r)
+                print (f"ANGLES: {j1}, {j2}, {j3}, {j4}, {j5}")
+                j1 = float(j1)/RAD2DEG
+                j2 = float(j2)/RAD2DEG
+                j3 = float(j3)/RAD2DEG
+                j4 = float(j4)/RAD2DEG
+                j5 = float(j5)/RAD2DEG
 
-        scene.run(steps, j1, j2, j3, j4, x, y, z)
+        scene.run(steps, j1, j2, j3, j4, j5)
         print ("ERROR:", calc_error())
 
 if __name__ == "__main__":
