@@ -130,8 +130,7 @@ class InteractiveScene:
                 self.cam.lookat[1] = 0
                 self.cam.lookat[2] = 0
 
-    def run(self, steps=999999, j1=None, j2=None, j3=None, j4=None, x=None, y=None, z=None, render=True):
-        # self.data.actuator('j4').ctrl[0] = 1.57/2
+    def run(self, steps=999999, j1=None, j2=None, j3=None, j4=None, x=None, y=None, z=None, p=None, render=True):
         while steps > 0 and not glfw.window_should_close(self.window):
             if kbhit():
                 input()
@@ -145,8 +144,8 @@ class InteractiveScene:
                 self.data.actuator('cursor_y').ctrl[0] = y
             if z is not None:
                 self.data.actuator('cursor_z').ctrl[0] = z
-            # if p is not None:
-            #     self.data.actuator('cursor_p').ctrl[0] = p
+            if p is not None:
+                self.data.actuator('cursor_p').ctrl[0] = p
             # if w is not None:
             #     self.data.actuator('cursor_w').ctrl[0] = w
             # if r is not None:
@@ -181,7 +180,7 @@ class InteractiveScene:
                 glfw.poll_events()
                 time.sleep(0.001)
 
-def coords_to_angles(x, y, z, link1_length=LINK_LENGTH1, link2_length=LINK_LENGTH2):
+def coords_to_angles(x, y, z, p, link1_length=LINK_LENGTH1, link2_length=LINK_LENGTH2):
     """
     Inverse kinematics for 3DOF arm with variable link lengths
     
@@ -240,7 +239,7 @@ def coords_to_angles(x, y, z, link1_length=LINK_LENGTH1, link2_length=LINK_LENGT
         
         pitch = pitch_base + shoulder_adjustment
     
-    return yaw, pitch, -elbow_angle, 45
+    return yaw, pitch, -elbow_angle, p*RAD2DEG
 
 def calc_error():
     endpt = scene.data.body("endpt").xpos
@@ -260,16 +259,16 @@ def main():
         x = input("coordinates and rotation: ")
         if x:
             inp = x.strip().split()
-            x, y, z = inp
+            x, y, z, p = inp
             x = float(x)
             y = float(y)
             z = float(z)
-            # p = float(p)/RAD2DEG #pitch
+            p = float(p)/RAD2DEG #cursor pitch
             # w = float(w)/RAD2DEG #yaW; y was already taken
             # r = float(r)/RAD2DEG #roll
-            scene.run(steps/2, j1, j2, j3, j4, x, y, z)
+            scene.run(steps/2, j1, j2, j3, j4, x, y, z, p)
 
-            j1, j2, j3, j4 = coords_to_angles(x, y, z)
+            j1, j2, j3, j4 = coords_to_angles(x, y, z, p)
             print (f"ANGLES: {j1}, {j2}, {j3}, {j4}")
             j1 = float(j1)/RAD2DEG
             j2 = float(j2)/RAD2DEG

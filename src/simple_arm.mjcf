@@ -9,14 +9,14 @@
         <light cutoff="100" ambient="0.25 0.25 0.25" diffuse=".7 .7 .7" specular=".85 .85 .85" dir="-0 0 -1.3" directional="true" exponent="1" pos="0 0 0" castshadow="false"/>
         <geom conaffinity="1" condim="4" name="floor" pos="0 0 -3.0" rgba="0.2 0.2 0.2 1" size="40 40 40" type="plane" material="MatPlane" friction="1 0.01 0.001"/>
         <body name="cursor" pos="0 0 0">
-            <geom type="sphere" size=".1" mass="0.1" contype="0" conaffinity="0" rgba="1 0 0 0.4"/>
+            <geom type="sphere" size=".1" mass="0.1" contype="0" conaffinity="0" rgba="1 0.6 0 0.4"/>
             <geom type="capsule" fromto="0 0 0  .15 0 0" size="0.0105" contype="0" conaffinity="0" rgba="1 0 0 1"/>
             <geom type="capsule" fromto="0 0 0  0 .15 0" size="0.0105" contype="0" conaffinity="0" rgba="0 1 0 1"/>
             <geom type="capsule" fromto="0 0 0  0 0 .15" size="0.0105" contype="0" conaffinity="0" rgba=".2 .3 1 1"/>
             <joint name="cursor_x" type="slide" range="-5 5" axis="1 0 0"/>
             <joint name="cursor_y" type="slide" range="-5 5" axis="0 1 0"/>
             <joint name="cursor_z" type="slide" range="-5 5" axis="0 0 1"/>
-            <joint name="cursor_p" type="hinge" axis="0 1 0"/>
+            <joint name="cursor_p" type="hinge" range="-180 180" axis="0 -1 0"/>
             <!-- <joint name="cursor_w" type="hinge" axis="0 0 1"/>
             <joint name="cursor_r" type="hinge" axis="1 0 0"/> -->
         </body>
@@ -58,7 +58,7 @@
         <position name="cursor_x" inheritrange="0" kp="5" kv="2" joint="cursor_x"/>
         <position name="cursor_y" inheritrange="0" kp="5" kv="2" joint="cursor_y"/>
         <position name="cursor_z" inheritrange="0" kp="5" kv="2" joint="cursor_z"/>
-        <position name="cursor_p" kp="3" kv="1" joint="cursor_p"/>
+        <position name="cursor_p" inheritrange="1" kp="3" kv="1" joint="cursor_p"/>
         <!-- <position name="cursor_w" kp="3" kv="1" joint="cursor_w"/>
         <position name="cursor_r" kp="3" kv="1" joint="cursor_r"/> -->
     </actuator>
