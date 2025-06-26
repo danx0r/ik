@@ -212,61 +212,73 @@ def coords_to_angles(x, y, z, p, w=0, r=0, link1_length=LINK_LENGTH1, link2_leng
     if xyz == 0:
         xyz = 0.0000001
     
+    # This is a different kinematic structure than typical 2-link arm
+    # j1: base rotation, j2: shoulder rotation (before link1), j3: elbow rotation
+    
     # J1: Base rotation (yaw) - rotation around Z axis
     j1 = math.atan2(y, x) * RAD2DEG
     
-    # Calculate position for the wrist center (subtract end effector offset)
-    # Assuming the end effector extends some distance from the wrist
-    # For now, we'll position the wrist at the target position
-    wrist_x, wrist_y, wrist_z = x, y, z
-    wrist_dist = (wrist_x**2 + wrist_y**2 + wrist_z**2) ** 0.5
-    wrist_xy = (wrist_x**2 + wrist_y**2) ** 0.5
+    # For the position IK, we need to work in the plane after j1 rotation
+    # Transform target to the plane after base rotation
+    target_dist = (x**2 + y**2) ** 0.5  # Distance in XY plane
+    target_z = z
+    
+    # Now solve 2-link IK in the (target_dist, z) plane
+    # Total distance from base to target
+    total_dist = (target_dist**2 + target_z**2) ** 0.5
     
     # Check if target is reachable
-    if wrist_dist > max_reach:
+    if total_dist > max_reach:
         # Target unreachable - extend arm fully toward target
+        j2 = math.atan2(target_z, target_dist) * RAD2DEG
         j3 = 0  # Fully extended elbow
-        j2 = math.atan2(wrist_z, wrist_xy) * RAD2DEG
     else:
         # J3: Elbow angle using law of cosines
-        cos_elbow = (link1_length**2 + link2_length**2 - wrist_dist**2) / (2 * link1_length * link2_length)
+        cos_elbow = (link1_length**2 + link2_length**2 - total_dist**2) / (2 * link1_length * link2_length)
         cos_elbow = max(-1, min(1, cos_elbow))  # Clamp to valid range
         j3 = math.acos(cos_elbow) * RAD2DEG
         j3 = 180 - j3  # Convert to joint angle convention
         
         # J2: Shoulder pitch
         # Calculate angle from horizontal to target
-        alpha = math.atan2(wrist_z, wrist_xy)
+        alpha = math.atan2(target_z, target_dist)
         # Calculate angle from link1 to target using law of cosines
-        cos_shoulder = (link1_length**2 + wrist_dist**2 - link2_length**2) / (2 * link1_length * wrist_dist)
+        cos_shoulder = (link1_length**2 + total_dist**2 - link2_length**2) / (2 * link1_length * total_dist)
         cos_shoulder = max(-1, min(1, cos_shoulder))
         beta = math.acos(cos_shoulder)
         j2 = (alpha + beta) * RAD2DEG
     
     # J4, J5, J6: End effector orientation (now true 6-DOF)
     # 
-    # Kinematic analysis:
-    # - End-effector pitch = j2 + j3 + j4 (all rotations around -Y axis)
-    # - End-effector roll = j5 (rotation around X axis)  
-    # - End-effector yaw = j1 + j6 (j1 global, j6 local)
+    # Key insight: The cursor orientation (p, w, r) is specified in GLOBAL coordinates,
+    # but j4, j5, j6 operate in the LOCAL arm coordinate system (rotated by j1).
     #
-    # For desired end-effector orientation (p, r, w):
-    # - Pitch: j2 + j3 + j4 = p  =>  j4 = p - (j2 + j3)
-    # - Roll: j5 = r
-    # - Yaw: j1 + j6 = w  =>  j6 = w - j1 (but j1 is set by position)
+    # We need to transform the desired global orientation to local coordinates:
     
-    # J4: Wrist pitch - compensate for arm pitch angles  
-    # In the actual robot: end_effector_pitch = j2 + (returned_j3) + j4
-    # Since we return -j3, the actual equation is: end_effector_pitch = j2 + (-j3) + j4
-    # We want: j2 + (-j3) + j4 = p * RAD2DEG
-    # Therefore: j4 = p * RAD2DEG - j2 - (-j3) = p * RAD2DEG - j2 + j3
-    j4 = p * RAD2DEG - j2 + j3
+    # Convert j1 to radians for transformation
+    j1_rad = j1 * math.pi / 180
     
-    # J5: Wrist roll - direct mapping
-    j5 = r * RAD2DEG
+    # Transform global orientation to local arm coordinates
+    # For a rotation of j1 around Z-axis:
+    # - Local pitch = global pitch (unchanged by Z rotation)
+    # - Local yaw = global yaw - j1 (subtract base rotation)  
+    # - Local roll = global roll (unchanged by Z rotation)
     
-    # J6: Wrist yaw - compensate for base rotation  
-    j6 = w * RAD2DEG - j1
+    local_pitch = p * RAD2DEG
+    local_yaw = w * RAD2DEG - j1  # Remove base rotation effect
+    local_roll = r * RAD2DEG
+    
+    # Now apply joint calculations in local frame:
+    # J4: Wrist pitch - compensate for arm pitch angles
+    # The forward kinematics applies rotations around -Y axis, so signs are negative
+    # Need to flip the sign for the desired pitch
+    j4 = -local_pitch - j2 + j3
+    
+    # J5: Wrist roll - direct mapping in local frame
+    j5 = local_roll
+    
+    # J6: Wrist yaw - direct mapping in local frame
+    j6 = local_yaw
     
     return j1, j2, -j3, j4, j5, j6
 
