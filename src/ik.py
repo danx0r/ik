@@ -239,7 +239,7 @@ def coords_to_angles(x, y, z, p, link1_length=LINK_LENGTH1, link2_length=LINK_LE
         
         pitch = pitch_base + shoulder_adjustment
     
-    return yaw, pitch, -elbow_angle, p*RAD2DEG
+    return yaw, pitch, -elbow_angle, p*RAD2DEG + elbow_angle - pitch
 
 def calc_error():
     endpt = scene.data.body("endpt").xpos
