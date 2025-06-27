@@ -280,7 +280,7 @@ def coords_to_angles(x, y, z, p, w=0, r=0, link1_length=LINK_LENGTH1, link2_leng
     # J6: Wrist yaw - direct mapping in local frame
     j6 = local_yaw
     
-    return j1, j2, -j3, j4, j5, j6
+    return j1, j2, -j3, j4-j3*1.15, j5, j6
 
 def calc_error():
     endpt = scene.data.body("endpt").xpos

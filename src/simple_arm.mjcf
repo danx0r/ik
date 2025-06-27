@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <mujoco>
-    <option gravity="0 0 -.1"/>
+    <option gravity="0 0 0"/>
     <asset>
         <texture builtin="checker" height="100" name="texplane" rgb1="0 0 0" rgb2="0.8 0.8 0.8" type="2d" width="100"/>
         <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="60 60" texture="texplane"/>
@@ -39,7 +39,7 @@
                     <geom type="capsule" fromto="0 -.2 0 0 0.2 0" size="0.007" contype="0" conaffinity="0" rgba=".7 .8 0 .6"/>
                     <body name="endpt" pos=".8 0 0">
                         <geom type="box" size="0.06" fromto="0 0 0 .1 0 0" contype="0" conaffinity="0" mass="001" rgba="0.2 0.8 0.7 0"/>
-                        <joint name="j4" type="hinge" axis="0 -1 0" range="-180 180"/>
+                        <joint name="j4" type="hinge" axis="0 1 0" range="-180 180"/>
                         <body pos="0 0 0">
                             <geom type="box" size="0.06" fromto="0 0 0 .1 0 0" contype="0" conaffinity="0" mass="001" rgba="0.2 0.8 0.7 0"/>
                             <joint name="j5" type="hinge" axis="1 0 0" range="-180 180"/>
